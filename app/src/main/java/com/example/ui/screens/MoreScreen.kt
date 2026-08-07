@@ -1,0 +1,760 @@
+package com.example.ui.screens
+
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.ContentScale
+
+import com.example.ui.components.formatAmount
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.SystemUpdate
+import com.example.ui.components.AppUpdateDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.data.model.BusinessSettingsEntity
+import com.example.data.model.IspPackageEntity
+import com.example.ui.components.SectionHeader
+
+@Composable
+fun MoreScreen(
+
+    settings: BusinessSettingsEntity,
+    packages: List<IspPackageEntity>,
+    onUpdateSettings: (BusinessSettingsEntity) -> Unit,
+    onAddPackageClick: () -> Unit,
+    onEditPackageClick: (IspPackageEntity) -> Unit,
+    onExportBackup: ((String) -> Unit) -> Unit,
+    onShowToast: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val msgDbCopied = androidx.compose.ui.res.stringResource(com.example.R.string.msg_db_copied)
+
+    var ispName by remember(settings) { mutableStateOf(settings.ispName) }
+    var hotline by remember(settings) { mutableStateOf(settings.hotline) }
+    var address by remember(settings) { mutableStateOf(settings.address) }
+    var currencySymbol by remember(settings) { mutableStateOf(settings.currencySymbol) }
+    var networkStatus by remember(settings) { mutableStateOf(settings.networkStatus) }
+    var themeMode by remember(settings) { mutableStateOf(settings.themeMode) }
+    var logoUri by remember(settings) { mutableStateOf(settings.logoUri) }
+
+    val imagePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                logoUri = uri.toString()
+            } catch (e: Exception) {
+                // Ignore
+                logoUri = uri.toString()
+            }
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item { Spacer(modifier = Modifier.height(8.dp)) }
+
+        // ISP Business Settings Card
+        item {
+            var showBusinessInfoDialog by remember { mutableStateOf(false) }
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showBusinessInfoDialog = true },
+                shape = RoundedCornerShape(18.dp),
+shadowElevation = 6.dp,
+tonalElevation = 3.dp,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SectionHeader(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.isp_business_info),
+                        subtitle = androidx.compose.ui.res.stringResource(com.example.R.string.configure_noc_desc)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = "Tap to open",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            if (showBusinessInfoDialog) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showBusinessInfoDialog = false },
+                    title = {
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(com.example.R.string.isp_business_info),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    },
+                    text = {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Logo Management
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(com.example.R.string.company_logo),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                if (logoUri != null) {
+                                    androidx.compose.foundation.layout.Box(
+                                        modifier = Modifier.size(64.dp).background(MaterialTheme.colorScheme.surfaceVariant, androidx.compose.foundation.shape.CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        coil.compose.AsyncImage(
+                                            model = logoUri,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(64.dp).clip(androidx.compose.foundation.shape.CircleShape),
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                        )
+                                    }
+                                } else {
+                                    androidx.compose.foundation.layout.Box(
+                                        modifier = Modifier.size(64.dp).background(MaterialTheme.colorScheme.surfaceVariant, androidx.compose.foundation.shape.CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(imageVector = Icons.Default.Business, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                                Column {
+                                    Button(
+                                        onClick = { imagePickerLauncher.launch(arrayOf("image/*")) },
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(if (logoUri == null) androidx.compose.ui.res.stringResource(com.example.R.string.select_logo) else androidx.compose.ui.res.stringResource(com.example.R.string.change_logo))
+                                    }
+                                    if (logoUri != null) {
+                                        androidx.compose.material3.TextButton(
+                                            onClick = { logoUri = null }
+                                        ) {
+                                            Text(androidx.compose.ui.res.stringResource(com.example.R.string.remove_logo), color = MaterialTheme.colorScheme.error)
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            OutlinedTextField(
+                                value = ispName,
+                                onValueChange = { ispName = it },
+                                label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.isp_name_brand)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = hotline,
+                                    onValueChange = { hotline = it },
+                                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.support_hotline)) },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                OutlinedTextField(
+                                    value = currencySymbol,
+                                    onValueChange = { currencySymbol = it },
+                                    label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.currency_symbol)) },
+                                    singleLine = true,
+                                    modifier = Modifier.width(90.dp)
+                                )
+                            }
+
+                            OutlinedTextField(
+                                value = address,
+                                onValueChange = { address = it },
+                                label = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.office_address)) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(com.example.R.string.network_status),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(androidx.compose.ui.res.stringResource(com.example.R.string.operational), androidx.compose.ui.res.stringResource(com.example.R.string.maintenance), androidx.compose.ui.res.stringResource(com.example.R.string.degraded)).forEach { status ->
+                                    FilterChip(
+                                        selected = (networkStatus == status),
+                                        onClick = { networkStatus = status },
+                                        label = { Text(status) }
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val updated = settings.copy(
+                                    ispName = ispName.trim(),
+                                    hotline = hotline.trim(),
+                                    address = address.trim(),
+                                    currencySymbol = currencySymbol.trim(),
+                                    networkStatus = networkStatus,
+                                    themeMode = themeMode,
+                                    logoUri = logoUri
+                                )
+                                onUpdateSettings(updated)
+                                showBusinessInfoDialog = false
+                            }
+                        ) {
+                            Text(androidx.compose.ui.res.stringResource(com.example.R.string.save_business_info))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showBusinessInfoDialog = false }) {
+                            Text(androidx.compose.ui.res.stringResource(com.example.R.string.cancel))
+                        }
+                    }
+                )
+            }
+        }
+
+        // Speed Packages Management
+        item {
+            var showPackagesDialog by remember { mutableStateOf(false) }
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showPackagesDialog = true },
+                shape = RoundedCornerShape(18.dp),
+shadowElevation = 6.dp,
+tonalElevation = 3.dp,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SectionHeader(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.speed_packages),
+                        
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Router,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = "Tap to open",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            if (showPackagesDialog) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showPackagesDialog = false },
+                    title = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(com.example.R.string.speed_packages),
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Button(
+                                onClick = {
+                                    showPackagesDialog = false
+                                    onAddPackageClick()
+                                },
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(androidx.compose.ui.res.stringResource(com.example.R.string.add_package_btn), fontSize = 12.sp)
+                            }
+                        }
+                    },
+                    text = {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            if (packages.isEmpty()) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(com.example.R.string.no_packages_created),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                packages.forEach { pkg ->
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+shadowElevation = 3.dp,
+tonalElevation = 2.dp,
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .padding(12.dp)
+                                                .fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = pkg.name,
+                                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = "${pkg.speedMbps} Mbps • ${settings.currencySymbol}${pkg.monthlyPrice.formatAmount()}/mo",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+
+                                            TextButton(onClick = {
+                                                showPackagesDialog = false
+                                                onEditPackageClick(pkg)
+                                            }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = androidx.compose.ui.res.stringResource(com.example.R.string.edit),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(androidx.compose.ui.res.stringResource(com.example.R.string.edit), fontSize = 12.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showPackagesDialog = false }) {
+                            Text(androidx.compose.ui.res.stringResource(com.example.R.string.cancel))
+                        }
+                    }
+                )
+            }
+        }
+
+
+        // Advanced Features Card
+        item {
+            var showAdvancedFeaturesScreen by remember { mutableStateOf(false) }
+
+            if (showAdvancedFeaturesScreen) {
+                androidx.compose.ui.window.Dialog(
+                    onDismissRequest = { showAdvancedFeaturesScreen = false },
+                    properties = androidx.compose.ui.window.DialogProperties(
+                        usePlatformDefaultWidth = false
+                    )
+                ) {
+                    AdvancedFeaturesScreen(
+                        onBackClick = { showAdvancedFeaturesScreen = false }
+                    )
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showAdvancedFeaturesScreen = true },
+                shape = RoundedCornerShape(18.dp),
+                shadowElevation = 6.dp,
+                tonalElevation = 3.dp,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SectionHeader(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.advanced_features)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = "Tap to open",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        // App Update Card
+        item {
+            var showUpdateDialog by remember { mutableStateOf(false) }
+
+            if (showUpdateDialog) {
+                AppUpdateDialog(
+                    onDismissRequest = { showUpdateDialog = false }
+                )
+            }
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showUpdateDialog = true },
+                shape = RoundedCornerShape(18.dp),
+                shadowElevation = 6.dp,
+                tonalElevation = 3.dp,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SectionHeader(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.app_update)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = "Tap to open",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        // Language Preference
+        item {
+            var showLanguageDialog by remember { mutableStateOf(false) }
+            val sharedPrefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+            var currentLang by remember { androidx.compose.runtime.mutableStateOf(sharedPrefs.getString("app_lang", "en") ?: "en") }
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showLanguageDialog = true },
+                shape = RoundedCornerShape(18.dp),
+                shadowElevation = 6.dp,
+                tonalElevation = 3.dp,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SectionHeader(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.language),
+                        subtitle = if (currentLang == "bn") "বাংলা" else "English"
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Language,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            if (showLanguageDialog) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showLanguageDialog = false },
+                    title = { Text(androidx.compose.ui.res.stringResource(com.example.R.string.language)) },
+                    text = {
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        sharedPrefs.edit().putString("app_lang", "en").apply()
+                                        currentLang = "en"
+                                        showLanguageDialog = false
+                                        (context as? android.app.Activity)?.recreate()
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = currentLang == "en",
+                                    onClick = {
+                                        sharedPrefs.edit().putString("app_lang", "en").apply()
+                                        currentLang = "en"
+                                        showLanguageDialog = false
+                                        (context as? android.app.Activity)?.recreate()
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("English")
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        sharedPrefs.edit().putString("app_lang", "bn").apply()
+                                        currentLang = "bn"
+                                        showLanguageDialog = false
+                                        (context as? android.app.Activity)?.recreate()
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = currentLang == "bn",
+                                    onClick = {
+                                        sharedPrefs.edit().putString("app_lang", "bn").apply()
+                                        currentLang = "bn"
+                                        showLanguageDialog = false
+                                        (context as? android.app.Activity)?.recreate()
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("বাংলা")
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showLanguageDialog = false }) {
+                            Text(androidx.compose.ui.res.stringResource(com.example.R.string.cancel))
+                        }
+                    }
+                )
+            }
+        }
+        
+        // Theme Preference
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+shadowElevation = 3.dp,
+tonalElevation = 2.dp,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SectionHeader(title = androidx.compose.ui.res.stringResource(com.example.R.string.app_theme_appearance))
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        listOf("SYSTEM", "DARK", "LIGHT").forEach { mode ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable {
+                                    themeMode = mode
+                                    onUpdateSettings(settings.copy(themeMode = mode))
+                                }
+                            ) {
+                                RadioButton(
+                                    selected = (themeMode == mode),
+                                    onClick = {
+                                        themeMode = mode
+                                        onUpdateSettings(settings.copy(themeMode = mode))
+                                    }
+                                )
+                                Text(
+                                    text = mode.lowercase().capitalize(),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Backup & System Utilities Card
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+shadowElevation = 3.dp,
+tonalElevation = 2.dp,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SectionHeader(title = androidx.compose.ui.res.stringResource(com.example.R.string.data_utilities_backup))
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = {
+                            onExportBackup { json ->
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("ISP Backup JSON", json)
+                                clipboard.setPrimaryClip(clip)
+                                onShowToast(msgDbCopied)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Backup,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(androidx.compose.ui.res.stringResource(com.example.R.string.export_json_backup))
+                    }
+                }
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(30.dp)) }
+    }
+}

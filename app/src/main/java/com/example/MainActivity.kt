@@ -1,0 +1,362 @@
+package com.example
+
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.ReceiptLong
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.BillEntity
+import com.example.data.model.CustomerEntity
+import com.example.data.model.IspPackageEntity
+import com.example.ui.components.BillGenerateDialog
+import com.example.ui.components.CustomerDialog
+import com.example.ui.components.PackageDialog
+import com.example.ui.components.PaymentDialog
+import com.example.ui.screens.BillingScreen
+import com.example.ui.screens.CollectionScreen
+import com.example.ui.screens.CustomersScreen
+import com.example.ui.screens.DashboardScreen
+import com.example.ui.screens.DueManagementScreen
+import com.example.ui.screens.MoreScreen
+import com.example.ui.theme.IspControlTheme
+import com.example.ui.viewmodel.IspViewModel
+
+enum class NavTab(
+    val titleRes: Int,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+) {
+    DASHBOARD(com.example.R.string.dashboard, Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
+    CUSTOMERS(com.example.R.string.customers, Icons.Filled.People, Icons.Outlined.People),
+    BILLING(com.example.R.string.billing, Icons.Filled.ReceiptLong, Icons.Outlined.ReceiptLong),
+    COLLECTION(com.example.R.string.collection, Icons.Filled.CreditCard, Icons.Outlined.CreditCard),
+    MORE(com.example.R.string.more, Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz)
+}
+
+class MainActivity : ComponentActivity() {
+
+    private val viewModel: IspViewModel by viewModels()
+
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val prefs = newBase.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+        val lang = prefs.getString("app_lang", "en") ?: "en"
+        val locale = java.util.Locale(lang)
+        java.util.Locale.setDefault(locale)
+        val config = android.content.res.Configuration(newBase.resources.configuration)
+        config.setLocale(locale)
+        val context = newBase.createConfigurationContext(config)
+        super.attachBaseContext(context)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        setContent {
+            val settings by viewModel.settings.collectAsStateWithLifecycle()
+            val useDarkTheme = when (settings.themeMode) {
+                "DARK" -> true
+                "LIGHT" -> false
+                else -> isSystemInDarkTheme()
+            }
+
+            IspControlTheme(darkTheme = useDarkTheme) {
+                MainAppContent(viewModel = viewModel)
+            }
+        }
+    }
+}
+
+@Composable
+fun MainAppContent(viewModel: IspViewModel) {
+    val context = LocalContext.current
+    var currentTab by remember { mutableStateOf(NavTab.DASHBOARD) }
+
+    val customers by viewModel.customers.collectAsStateWithLifecycle()
+    val packages by viewModel.packages.collectAsStateWithLifecycle()
+    val bills by viewModel.bills.collectAsStateWithLifecycle()
+    val payments by viewModel.payments.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+
+    val customerQuery by viewModel.customerSearchQuery.collectAsStateWithLifecycle()
+    val customerStatusFilter by viewModel.customerStatusFilter.collectAsStateWithLifecycle()
+
+    val billQuery by viewModel.billSearchQuery.collectAsStateWithLifecycle()
+
+    val collectionQuery by viewModel.collectionSearchQuery.collectAsStateWithLifecycle()
+
+    val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Dialog state
+    var showCustomerDialog by remember { mutableStateOf(false) }
+    var customerToEdit by remember { mutableStateOf<CustomerEntity?>(null) }
+
+    var showPaymentDialog by remember { mutableStateOf(false) }
+    var preSelectedPaymentBill by remember { mutableStateOf<BillEntity?>(null) }
+
+    var showPackageDialog by remember { mutableStateOf(false) }
+    var packageToEdit by remember { mutableStateOf<IspPackageEntity?>(null) }
+
+    var showGenerateBillsDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearToast()
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            NavigationBar(
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ) {
+                NavTab.entries.forEach { tab ->
+                    val isSelected = currentTab == tab
+                    NavigationBarItem(
+                        selected = isSelected,
+                        onClick = { currentTab = tab },
+                        icon = {
+                            Icon(
+                                imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
+                                contentDescription = androidx.compose.ui.res.stringResource(tab.titleRes)
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(tab.titleRes),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    )
+                }
+            }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            when (currentTab) {
+                NavTab.DASHBOARD -> {
+                    DashboardScreen(
+                        customers = customers,
+                        bills = bills,
+                        payments = payments,
+                        settings = settings,
+                        onNavigateToCustomers = { currentTab = NavTab.CUSTOMERS },
+                        onNavigateToBilling = { currentTab = NavTab.BILLING },
+                        onNavigateToCollection = { currentTab = NavTab.COLLECTION },
+                        onNavigateToDue = {
+                            currentTab = NavTab.BILLING
+                        },
+                        onAddCustomerClick = {
+                            customerToEdit = null
+                            showCustomerDialog = true
+                        },
+                        onCollectPaymentClick = {
+                            preSelectedPaymentBill = null
+                            showPaymentDialog = true
+                        },
+                        onGenerateBillsClick = {
+                            showGenerateBillsDialog = true
+                        }
+                    )
+                }
+
+                NavTab.CUSTOMERS -> {
+                    CustomersScreen(
+                        customers = customers,
+                        bills = bills,
+                        payments = payments,
+                        packages = packages,
+                        currencySymbol = settings.currencySymbol,
+                        searchQuery = customerQuery,
+                        onSearchQueryChange = { viewModel.customerSearchQuery.value = it },
+                        selectedStatusFilter = customerStatusFilter,
+                        onStatusFilterChange = { viewModel.customerStatusFilter.value = it },
+                        onAddCustomerClick = {
+                            customerToEdit = null
+                            showCustomerDialog = true
+                        },
+                        onEditCustomerClick = { cust ->
+                            customerToEdit = cust
+                            showCustomerDialog = true
+                        },
+                        onDeleteCustomerClick = { cust ->
+                            viewModel.deleteCustomer(cust)
+                        },
+                        onToggleStatusClick = { cust ->
+                            viewModel.toggleCustomerStatus(cust)
+                        },
+                        onCollectPaymentForCustomer = { cust ->
+                            val unpaidForCust = bills.find { it.customerId == cust.id && it.dueAmount > 0 }
+                            preSelectedPaymentBill = unpaidForCust
+                            showPaymentDialog = true
+                        }
+                    )
+                }
+
+                NavTab.BILLING -> {
+                    val billingScreenBills by viewModel.billingScreenBills.collectAsStateWithLifecycle()
+                    BillingScreen(
+                        bills = billingScreenBills,
+                        currencySymbol = settings.currencySymbol,
+                        searchQuery = billQuery,
+                        onSearchQueryChange = { viewModel.billSearchQuery.value = it },
+                        onGenerateBillsClick = { showGenerateBillsDialog = true },
+                        onRecordPaymentForBill = { bill ->
+                            preSelectedPaymentBill = bill
+                            showPaymentDialog = true
+                        }
+                    )
+                }
+
+                NavTab.COLLECTION -> {
+                    CollectionScreen(
+                        payments = payments,
+                        bills = bills,
+                        currencySymbol = settings.currencySymbol,
+                        searchQuery = collectionQuery,
+                        onSearchQueryChange = { viewModel.collectionSearchQuery.value = it },
+                        onCollectPaymentClick = {
+                            preSelectedPaymentBill = null
+                            showPaymentDialog = true
+                        }
+                    )
+                }
+
+                NavTab.MORE -> {
+                    MoreScreen(
+                        settings = settings,
+                        packages = packages,
+                        onUpdateSettings = { newSettings -> viewModel.updateSettings(newSettings) },
+                        onAddPackageClick = {
+                            packageToEdit = null
+                            showPackageDialog = true
+                        },
+                        onEditPackageClick = { pkg ->
+                            packageToEdit = pkg
+                            showPackageDialog = true
+                        },
+                        onExportBackup = { callback ->
+                            viewModel.exportBackup(callback)
+                        },
+                        onShowToast = { msg ->
+                            viewModel.showToast(msg)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // Dialogs
+    if (showCustomerDialog) {
+        CustomerDialog(
+            initialCustomer = customerToEdit,
+            availablePackages = packages,
+            currencySymbol = settings.currencySymbol,
+            onDismiss = { showCustomerDialog = false },
+            onSave = { customer ->
+                if (customer.id == 0L) {
+                    viewModel.saveCustomer(customer)
+                } else {
+                    viewModel.updateCustomer(customer)
+                }
+                showCustomerDialog = false
+            }
+        )
+    }
+
+    if (showPaymentDialog) {
+        val unpaidBills = bills.filter { it.dueAmount > 0 }
+        PaymentDialog(
+            unpaidBills = unpaidBills,
+            preSelectedBill = preSelectedPaymentBill,
+            currencySymbol = settings.currencySymbol,
+            onDismiss = { showPaymentDialog = false },
+            onRecordPayment = { billId, customerId, amount, method, notes ->
+                viewModel.recordPayment(billId, customerId, amount, method, notes)
+                showPaymentDialog = false
+            }
+        )
+    }
+
+    if (showPackageDialog) {
+        PackageDialog(
+            initialPackage = packageToEdit,
+            currencySymbol = settings.currencySymbol,
+            onDismiss = { showPackageDialog = false },
+            onSave = { pkg ->
+                if (pkg.id == 0L) {
+                    viewModel.savePackage(pkg)
+                } else {
+                    viewModel.updatePackage(pkg)
+                }
+                showPackageDialog = false
+            }
+        )
+    }
+
+    if (showGenerateBillsDialog) {
+        val activeCount = customers.count { it.status == "ACTIVE" }
+        BillGenerateDialog(
+            activeCustomerCount = activeCount,
+            onDismiss = { showGenerateBillsDialog = false },
+            onGenerate = { month, dueDate ->
+                viewModel.generateMonthlyBills(month, dueDate)
+                showGenerateBillsDialog = false
+            }
+        )
+    }
+}

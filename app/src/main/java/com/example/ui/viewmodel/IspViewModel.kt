@@ -1,0 +1,293 @@
+package com.example.ui.viewmodel
+
+import com.example.ui.components.formatAmount
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.data.database.IspDatabase
+import com.example.data.model.BillEntity
+import com.example.data.model.BusinessSettingsEntity
+import com.example.data.model.CustomerEntity
+import com.example.data.model.IspPackageEntity
+import com.example.data.model.PaymentEntity
+import com.example.data.repository.IspRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+class IspViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val repository: IspRepository
+
+    val customers: StateFlow<List<CustomerEntity>>
+    val packages: StateFlow<List<IspPackageEntity>>
+    val bills: StateFlow<List<BillEntity>>
+    val payments: StateFlow<List<PaymentEntity>>
+    val settings: StateFlow<BusinessSettingsEntity>
+    val todayCollectionAmount: StateFlow<Double>
+
+    // UI state filters & queries
+    val customerSearchQuery = MutableStateFlow("")
+    val customerStatusFilter = MutableStateFlow("ALL") // ALL, ACTIVE, INACTIVE, SUSPENDED
+
+    val billSearchQuery = MutableStateFlow("")
+
+    val collectionSearchQuery = MutableStateFlow("")
+    val dueSortOption = MutableStateFlow("DUE_DESC") // DUE_DESC, DUE_ASC, NAME
+
+    val selectedCustomerForDetail = MutableStateFlow<CustomerEntity?>(null)
+
+    private val _toastMessage = MutableStateFlow<String?>(null)
+    val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
+
+    init {
+        val db = IspDatabase.getDatabase(application)
+        repository = IspRepository(
+            db.customerDao(),
+            db.packageDao(),
+            db.billDao(),
+            db.paymentDao(),
+            db.settingsDao()
+        )
+
+        customers = repository.customers.stateIn(
+            viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        )
+
+        packages = repository.packages.stateIn(
+            viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        )
+
+        bills = repository.bills.stateIn(
+            viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        )
+
+        payments = repository.payments.stateIn(
+            viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        )
+
+        settings = repository.settings.combine(MutableStateFlow(Unit)) { s, _ ->
+            s ?: BusinessSettingsEntity(
+                id = 1,
+                ispName = "Global Fiber ISP",
+                hotline = "+1 (800) 555-0199",
+                address = "Central NOC, Tech City",
+                currencySymbol = "৳",
+                networkStatus = "Operational",
+                themeMode = "SYSTEM"
+            )
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            BusinessSettingsEntity()
+        )
+
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+        val todayStr = sdf.format(java.util.Date())
+        todayCollectionAmount = repository.getCollectedAmountForDate(todayStr).stateIn(
+            viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0
+        )
+
+        seedDefaultPackagesAndSettingsIfNeeded()
+        autoGenerateCurrentMonthBills()
+    }
+
+
+    val billingScreenBills: StateFlow<List<BillEntity>> = bills.map { rawBills ->
+        val unpaidBills = rawBills.filter { it.status == "UNPAID" || it.status == "PARTIAL" }
+        val billsByCustomer = unpaidBills.groupBy { it.customerId }
+        val displayBills = mutableListOf<BillEntity>()
+
+        for ((custId, cBills) in billsByCustomer) {
+            val sorted = cBills.sortedByDescending { it.id }
+            val currentBill = sorted.first()
+            val previousBills = sorted.drop(1)
+            val previousDue = previousBills.sumOf { it.dueAmount }
+
+            if (previousDue > 0) {
+                val totalDue = currentBill.dueAmount + previousDue
+                val virtualBill = currentBill.copy(
+                    billNumber = "Cur: ${currentBill.dueAmount.formatAmount()} | Prev Due: $previousDue",
+                    amount = totalDue,
+                    dueAmount = totalDue,
+                    paidAmount = 0.0 // Representing remaining aggregate
+                )
+                displayBills.add(virtualBill)
+            } else {
+                displayBills.add(currentBill)
+            }
+        }
+        
+        // Also add paid bills just in case they are needed? BillingScreen filters by UNPAID/PARTIAL
+        val paidBills = rawBills.filter { it.status == "PAID" }
+        displayBills.addAll(paidBills)
+        
+        displayBills
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun autoGenerateCurrentMonthBills() {
+        viewModelScope.launch {
+            val sdfMonth = java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale.getDefault())
+            val sdfDay = java.text.SimpleDateFormat("yyyy-MM-10", java.util.Locale.getDefault())
+            val currentMonth = sdfMonth.format(java.util.Date())
+            val dueDate = sdfDay.format(java.util.Date())
+            repository.generateMonthlyBills(currentMonth, dueDate)
+        }
+    }
+
+    private fun seedDefaultPackagesAndSettingsIfNeeded() {
+        viewModelScope.launch {
+            val currentPkgs = repository.packages.first()
+            if (currentPkgs.isEmpty()) {
+                repository.savePackage(IspPackageEntity(name = "10 Mbps Starter Fiber", speedMbps = 10, monthlyPrice = 25.0, description = "Home browsing & SD streaming"))
+                repository.savePackage(IspPackageEntity(name = "25 Mbps Standard Fiber", speedMbps = 25, monthlyPrice = 40.0, description = "Multi-device HD streaming"))
+                repository.savePackage(IspPackageEntity(name = "50 Mbps Ultra Fiber", speedMbps = 50, monthlyPrice = 65.0, description = "4K streaming & gaming"))
+                repository.savePackage(IspPackageEntity(name = "100 Mbps Enterprise", speedMbps = 100, monthlyPrice = 110.0, description = "Gigabit dedicated line"))
+            }
+
+            val currentSettings = repository.settings.first()
+            if (currentSettings == null) {
+                repository.saveSettings(
+                    BusinessSettingsEntity(
+                        id = 1,
+                        ispName = "FastNet Broadband",
+                        hotline = "+1 (800) 555-0199",
+                        address = "Main NOC, Plaza Suite 10",
+                        currencySymbol = "৳",
+                        networkStatus = "Operational",
+                        themeMode = "SYSTEM"
+                    )
+                )
+            } else if (currentSettings.currencySymbol == "$") {
+                repository.saveSettings(
+                    currentSettings.copy(currencySymbol = "৳")
+                )
+            }
+        }
+    }
+
+    fun clearToast() {
+        _toastMessage.value = null
+    }
+
+    fun showToast(msg: String) {
+        _toastMessage.value = msg
+    }
+
+    fun saveCustomer(customer: CustomerEntity) {
+        viewModelScope.launch {
+            repository.saveCustomer(customer)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_customer_saved)
+        }
+    }
+
+    fun updateCustomer(customer: CustomerEntity) {
+        viewModelScope.launch {
+            repository.updateCustomer(customer)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_customer_updated)
+            if (selectedCustomerForDetail.value?.id == customer.id) {
+                selectedCustomerForDetail.value = customer
+            }
+        }
+    }
+
+    fun deleteCustomer(customer: CustomerEntity) {
+        viewModelScope.launch {
+            repository.deleteCustomer(customer)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_customer_removed)
+            if (selectedCustomerForDetail.value?.id == customer.id) {
+                selectedCustomerForDetail.value = null
+            }
+        }
+    }
+
+    fun toggleCustomerStatus(customer: CustomerEntity) {
+        val newStatus = when (customer.status) {
+            "ACTIVE" -> "SUSPENDED"
+            "SUSPENDED" -> "INACTIVE"
+            else -> "ACTIVE"
+        }
+        viewModelScope.launch {
+            repository.updateCustomerStatus(customer.id, newStatus)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_customer_status, newStatus)
+            selectedCustomerForDetail.value?.let {
+                if (it.id == customer.id) {
+                    selectedCustomerForDetail.value = it.copy(status = newStatus)
+                }
+            }
+        }
+    }
+
+    fun savePackage(pkg: IspPackageEntity) {
+        viewModelScope.launch {
+            repository.savePackage(pkg)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_package_saved)
+        }
+    }
+
+    fun updatePackage(pkg: IspPackageEntity) {
+        viewModelScope.launch {
+            repository.updatePackage(pkg)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_package_updated)
+        }
+    }
+
+    fun deletePackage(pkg: IspPackageEntity) {
+        viewModelScope.launch {
+            repository.deletePackage(pkg)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_package_removed)
+        }
+    }
+
+    fun generateMonthlyBills(billingMonth: String, dueDate: String) {
+        viewModelScope.launch {
+            val count = repository.generateMonthlyBills(billingMonth, dueDate)
+            if (count > 0) {
+                _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_generated_bills, count, billingMonth)
+            } else {
+                _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_no_active_customers_bill)
+            }
+        }
+    }
+
+    fun recordPayment(
+        billId: Long,
+        customerId: Long,
+        amount: Double,
+        paymentMethod: String,
+        notes: String
+    ) {
+        viewModelScope.launch {
+            val success = repository.recordPayment(billId, customerId, amount, paymentMethod, notes)
+            if (success) {
+                _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_payment_recorded, settings.value.currencySymbol, amount.formatAmount())
+            } else {
+                _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_error_payment)
+            }
+        }
+    }
+
+    fun updateSettings(newSettings: BusinessSettingsEntity) {
+        viewModelScope.launch {
+            repository.saveSettings(newSettings)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_business_updated)
+        }
+    }
+
+    fun exportBackup(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val json = repository.exportDataJson()
+            onResult(json)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_backup_ready)
+        }
+    }
+}

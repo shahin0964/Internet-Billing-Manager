@@ -1,0 +1,71 @@
+package com.example.data.model
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "customers")
+data class CustomerEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val customerCode: String,
+    val name: String,
+    val phone: String,
+    val address: String,
+    val pppoeUsername: String,
+    val ipAddress: String = "",
+    val packageId: Long,
+    val packageName: String,
+    val monthlyFee: Double,
+    val status: String = "ACTIVE", // ACTIVE, INACTIVE, SUSPENDED
+    val joiningDate: String,
+    val notes: String = ""
+)
+
+@Entity(tableName = "packages")
+data class IspPackageEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val speedMbps: Int,
+    val monthlyPrice: Double,
+    val description: String = ""
+)
+
+@Entity(tableName = "bills")
+data class BillEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val billNumber: String,
+    val customerId: Long,
+    val customerName: String,
+    val customerCode: String,
+    val billingMonth: String, // e.g. "2026-08" or "August 2026"
+    val amount: Double,
+    val paidAmount: Double = 0.0,
+    val dueAmount: Double,
+    val status: String = "UNPAID", // PAID, PARTIAL, UNPAID
+    val generatedDate: String,
+    val dueDate: String
+)
+
+@Entity(tableName = "payments")
+data class PaymentEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val paymentReceiptNo: String,
+    val billId: Long,
+    val customerId: Long,
+    val customerName: String,
+    val amount: Double,
+    val paymentDate: String,
+    val paymentMethod: String = "Cash", // Cash, bKash, Card, Bank, Online
+    val notes: String = ""
+)
+
+@Entity(tableName = "business_settings")
+data class BusinessSettingsEntity(
+    @PrimaryKey val id: Int = 1,
+    val ispName: String = "Broadband ISP",
+    val hotline: String = "",
+    val address: String = "",
+    val currencySymbol: String = "৳",
+    val networkStatus: String = "Operational",
+    val themeMode: String = "SYSTEM", // SYSTEM, DARK, LIGHT
+    val logoUri: String? = null
+)

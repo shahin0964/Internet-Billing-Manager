@@ -1,0 +1,6 @@
+{
+  "name": "ISP Control Center",
+  "description": "Network & Internet Billing Management System for ISPs and local resellers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
