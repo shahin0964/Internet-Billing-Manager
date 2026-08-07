@@ -55,13 +55,22 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      
       val releaseConfig = signingConfigs.getByName("release")
-      if (releaseConfig.storeFile != null && releaseConfig.storeFile!!.exists()) {
-        signingConfig = releaseConfig
-      } else {
-        val debugKs = file("${rootDir}/debug.keystore")
-        if (debugKs.exists()) {
-          signingConfig = signingConfigs.getByName("debug")
+      signingConfig = releaseConfig
+
+      if (releaseConfig.storeFile == null || !releaseConfig.storeFile!!.exists() || releaseConfig.storePassword.isNullOrEmpty()) {
+        gradle.taskGraph.whenReady {
+          val isReleaseTask = allTasks.any { task ->
+            val name = task.name.lowercase()
+            name.contains("assemblerelease") || name.contains("bundlerelease") || name.contains("packageinreleasemode")
+          }
+          if (isReleaseTask) {
+            throw GradleException(
+              "PRODUCTION RELEASE BUILD ERROR: Missing valid release keystore or store password. " +
+              "Ensure KEYSTORE_BASE64, KEYSTORE_PATH, STORE_PASSWORD / KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD secrets are configured in GitHub Actions."
+            )
+          }
         }
       }
     }
