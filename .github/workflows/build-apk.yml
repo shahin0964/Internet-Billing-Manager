@@ -22,7 +22,8 @@ jobs:
     env:
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH }}
-      STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+      STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
@@ -92,16 +93,21 @@ jobs:
           mkdir -p app/build/outputs/apk/release
           mkdir -p release
 
-          echo "Searching for generated release APK..."
-          FOUND_APK=$(find . -type f -path "*/build/outputs/apk/*release/*.apk" ! -name "ISP-Billing-Release.apk" | head -n 1)
+          echo "Searching for signed release APK..."
+          FOUND_APK=$(find . -type f -path "*/build/outputs/apk/*release/*.apk" ! -name "*unsigned*.apk" ! -name "*unaligned*.apk" ! -name "ISP-Billing-Release.apk" | head -n 1)
 
           if [ -z "$FOUND_APK" ]; then
-            echo "Searching all APK files for release variant..."
-            FOUND_APK=$(find . -type f -name "*.apk" ! -name "ISP-Billing-Release.apk" | grep -i "release" | head -n 1)
+            echo "Searching all APK files for signed release variant..."
+            FOUND_APK=$(find . -type f -name "*.apk" ! -name "*unsigned*.apk" ! -name "*unaligned*.apk" ! -name "ISP-Billing-Release.apk" | grep -i "release" | head -n 1)
           fi
 
           if [ -z "$FOUND_APK" ]; then
-            echo "ERROR: Release APK could not be found!"
+            echo "Searching for any generated APK..."
+            FOUND_APK=$(find . -type f -name "*.apk" ! -name "*unsigned*.apk" ! -name "*unaligned*.apk" ! -name "ISP-Billing-Release.apk" | head -n 1)
+          fi
+
+          if [ -z "$FOUND_APK" ]; then
+            echo "ERROR: Valid signed release APK could not be found!"
             exit 1
           fi
 
@@ -126,7 +132,27 @@ jobs:
 
           echo "Testing APK ZIP structure..."
           unzip -t "$APK_PATH" > /dev/null
-          echo "Production APK structure verification passed!"
+
+          echo "Verifying APK Signature..."
+          APKSIGNER=""
+          if [ -d "$ANDROID_HOME/build-tools" ]; then
+            APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name "apksigner" | sort -V | tail -n 1)
+          fi
+
+          if [ -n "$APKSIGNER" ] && [ -x "$APKSIGNER" ]; then
+            echo "Using apksigner: $APKSIGNER"
+            "$APKSIGNER" verify --verbose "$APK_PATH" || {
+              echo "ERROR: apksigner signature verification failed!"
+              exit 1
+            }
+          else
+            echo "Using jarsigner to verify APK..."
+            jarsigner -verify -verbose -certs "$APK_PATH" || {
+              echo "ERROR: jarsigner signature verification failed!"
+              exit 1
+            }
+          fi
+          echo "Production APK structure and signature verification passed!"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

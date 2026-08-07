@@ -26,17 +26,24 @@ android {
   signingConfigs {
     create("release") {
       val envKeystorePath = System.getenv("KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
-      val keystorePath = envKeystorePath ?: "${rootDir}/internet-billing-release.jks"
-      val ksFile = if (keystorePath.isNotBlank()) file(keystorePath) else null
-      val storePasswordEnv = System.getenv("STORE_PASSWORD")?.takeIf { it.isNotBlank() }
+      val storePasswordEnv = (System.getenv("STORE_PASSWORD")?.takeIf { it.isNotBlank() }
+        ?: System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() })
       val keyAliasEnv = System.getenv("KEY_ALIAS")?.takeIf { it.isNotBlank() }
-      val keyPasswordEnv = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+      val keyPasswordEnv = (System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+        ?: storePasswordEnv)
 
-      if (ksFile != null && ksFile.exists() && !storePasswordEnv.isNullOrEmpty()) {
+      val ksFile = when {
+        !envKeystorePath.isNullOrBlank() && file(envKeystorePath).exists() -> file(envKeystorePath)
+        file("${rootDir}/release.keystore").exists() -> file("${rootDir}/release.keystore")
+        file("${rootDir}/internet-billing-release.jks").exists() -> file("${rootDir}/internet-billing-release.jks")
+        else -> null
+      }
+
+      if (ksFile != null && !storePasswordEnv.isNullOrEmpty()) {
         storeFile = ksFile
         storePassword = storePasswordEnv
         keyAlias = if (!keyAliasEnv.isNullOrEmpty()) keyAliasEnv else "upload"
-        keyPassword = if (!keyPasswordEnv.isNullOrEmpty()) keyPasswordEnv else storePasswordEnv
+        keyPassword = keyPasswordEnv
         enableV1Signing = true
         enableV2Signing = true
       }
