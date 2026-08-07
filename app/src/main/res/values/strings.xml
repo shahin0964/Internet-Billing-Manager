@@ -256,6 +256,33 @@
     <string name="msg_category_added">New category added</string>
     <string name="all_months">All Months</string>
     <string name="no_prev_month_data">No data for previous month comparison</string>
+
+    <!-- Backup & Restore Strings -->
+    <string name="backup_and_restore">Backup &amp; Restore</string>
+    <string name="backup_restore_subtitle">Securely backup and restore your app data</string>
+    <string name="create_backup">Create Backup</string>
+    <string name="restore_backup">Restore Backup</string>
+    <string name="set_backup_password">Set Backup Password</string>
+    <string name="enter_backup_password">Enter Backup Password</string>
+    <string name="backup_password">Backup Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="save_backup">Save Backup</string>
+    <string name="share_backup">Share Backup</string>
+    <string name="local_backup_history">Local Backup History</string>
+    <string name="no_local_backups">No local backups created yet</string>
+    <string name="restore_warning_title">Warning</string>
+    <string name="restore_warning_msg">Restoring a backup may replace your current data. Make sure you have a backup of your current data before continuing.</string>
+    <string name="restore_confirm">Restore</string>
+    <string name="invalid_backup_error">This backup is invalid, corrupted, or the password is incorrect.</string>
+    <string name="backup_created_success">Encrypted backup created successfully</string>
+    <string name="backup_restored_success">App data restored successfully</string>
+    <string name="passwords_do_not_match">Passwords do not match</string>
+    <string name="password_too_short">Password must be at least 4 characters</string>
+    <string name="encrypt_and_save">Encrypt &amp; Save</string>
+    <string name="decrypt_and_restore">Decrypt &amp; Restore</string>
+    <string name="latest_created_backup">Latest Created Backup</string>
+    <string name="delete_backup_title">Delete Local Backup</string>
+    <string name="delete_backup_confirm">Are you sure you want to delete this backup file?</string>
 </resources>
 
 

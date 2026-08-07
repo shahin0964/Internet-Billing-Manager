@@ -252,6 +252,33 @@
     <string name="msg_category_added">নতুন ক্যাটাগরি যুক্ত হয়েছে</string>
     <string name="all_months">সব মাস</string>
     <string name="no_prev_month_data">পূর্ববর্তী মাসের তুলনামূলক তথ্য পাওয়া যায়নি</string>
+
+    <!-- Backup & Restore Strings -->
+    <string name="backup_and_restore">ব্যাকআপ ও রিস্টোর</string>
+    <string name="backup_restore_subtitle">আপনার অ্যাপের ডাটা নিরাপদে ব্যাকআপ ও রিস্টোর করুন</string>
+    <string name="create_backup">ব্যাকআপ তৈরি করুন</string>
+    <string name="restore_backup">ব্যাকআপ রিস্টোর করুন</string>
+    <string name="set_backup_password">ব্যাকআপ পাসওয়ার্ড দিন</string>
+    <string name="enter_backup_password">ব্যাকআপ পাসওয়ার্ড দিন</string>
+    <string name="backup_password">পাসওয়ার্ড</string>
+    <string name="confirm_password">পাসওয়ার্ড নিশ্চিত করুন</string>
+    <string name="save_backup">ব্যাকআপ সংরক্ষণ করুন</string>
+    <string name="share_backup">ব্যাকআপ শেয়ার করুন</string>
+    <string name="local_backup_history">স্থানীয় ব্যাকআপ হিস্টোরি</string>
+    <string name="no_local_backups">এখনও পর্যন্ত কোন ব্যাকআপ তৈরি করা হয়নি</string>
+    <string name="restore_warning_title">সাবধানতা</string>
+    <string name="restore_warning_msg">ব্যাকআপ রিস্টোর করলে বর্তমান ডাটা পরিবর্তন বা প্রতিস্থাপিত হতে পারে। চালিয়ে যাওয়ার আগে বর্তমান ডাটার একটি ব্যাকআপ রাখুন।</string>
+    <string name="restore_confirm">রিস্টোর</string>
+    <string name="invalid_backup_error">এই ব্যাকআপটি ভুল, নষ্ট, অথবা পাসওয়ার্ড সঠিক নয়।</string>
+    <string name="backup_created_success">এনক্রিপ্ট করা ব্যাকআপ সফলভাবে তৈরি হয়েছে</string>
+    <string name="backup_restored_success">অ্যাপের ডাটা সফলভাবে রিস্টোর করা হয়েছে</string>
+    <string name="passwords_do_not_match">পাসওয়ার্ড দুটি মেলেনি</string>
+    <string name="password_too_short">পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে</string>
+    <string name="encrypt_and_save">এনক্রিপ্ট ও সংরক্ষণ</string>
+    <string name="decrypt_and_restore">ডিক্রিপ্ট ও রিস্টোর</string>
+    <string name="latest_created_backup">সর্বশেষ তৈরি ব্যাকআপ</string>
+    <string name="delete_backup_title">ব্যাকআপ ফাইল মুছুন</string>
+    <string name="delete_backup_confirm">আপনি কি এই ব্যাকআপ ফাইলটি মুছে ফেলতে চান?</string>
 </resources>
 
 

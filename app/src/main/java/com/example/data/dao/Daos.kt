@@ -26,6 +26,9 @@ interface CustomerDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCustomer(customer: CustomerEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCustomers(customers: List<CustomerEntity>)
+
     @Update
     suspend fun updateCustomer(customer: CustomerEntity)
 
@@ -34,6 +37,9 @@ interface CustomerDao {
 
     @Query("UPDATE customers SET status = :status WHERE id = :id")
     suspend fun updateCustomerStatus(id: Long, status: String)
+
+    @Query("DELETE FROM customers")
+    suspend fun deleteAllCustomers()
 }
 
 @Dao
@@ -44,11 +50,17 @@ interface IspPackageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPackage(pkg: IspPackageEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPackages(packages: List<IspPackageEntity>)
+
     @Update
     suspend fun updatePackage(pkg: IspPackageEntity)
 
     @Delete
     suspend fun deletePackage(pkg: IspPackageEntity)
+
+    @Query("DELETE FROM packages")
+    suspend fun deleteAllPackages()
 }
 
 @Dao
@@ -73,6 +85,9 @@ interface BillDao {
 
     @Delete
     suspend fun deleteBill(bill: BillEntity)
+
+    @Query("DELETE FROM bills")
+    suspend fun deleteAllBills()
 }
 
 @Dao
@@ -91,6 +106,12 @@ interface PaymentDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPayment(payment: PaymentEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPayments(payments: List<PaymentEntity>)
+
+    @Query("DELETE FROM payments")
+    suspend fun deleteAllPayments()
 }
 
 @Dao
@@ -100,6 +121,9 @@ interface BusinessSettingsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateSettings(settings: BusinessSettingsEntity)
+
+    @Query("DELETE FROM business_settings")
+    suspend fun deleteSettings()
 }
 
 @Dao
@@ -119,6 +143,9 @@ interface ExpenseDao {
     @Delete
     suspend fun deleteExpense(expense: ExpenseEntity)
 
+    @Query("DELETE FROM expenses")
+    suspend fun deleteAllExpenses()
+
     @Query("SELECT * FROM expense_categories ORDER BY name ASC")
     fun getAllCategories(): Flow<List<ExpenseCategoryEntity>>
 
@@ -127,4 +154,7 @@ interface ExpenseDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCategories(categories: List<ExpenseCategoryEntity>)
+
+    @Query("DELETE FROM expense_categories")
+    suspend fun deleteAllCategories()
 }

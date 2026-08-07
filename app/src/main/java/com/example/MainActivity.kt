@@ -147,6 +147,7 @@ fun MainAppContent(viewModel: IspViewModel) {
 
     var showGenerateBillsDialog by remember { mutableStateOf(false) }
     var showAutoUpdatePrompt by remember { mutableStateOf(false) }
+    var showBackupAndRestoreScreen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -319,6 +320,9 @@ fun MainAppContent(viewModel: IspViewModel) {
                         },
                         onOpenExpenseManagement = {
                             showExpenseManagementScreen = true
+                        },
+                        onOpenBackupAndRestore = {
+                            showBackupAndRestoreScreen = true
                         }
                     )
                 }
@@ -342,6 +346,20 @@ fun MainAppContent(viewModel: IspViewModel) {
                 onUpdateExpense = { viewModel.updateExpense(it) },
                 onDeleteExpense = { viewModel.deleteExpense(it) },
                 onAddCustomCategory = { viewModel.addCustomCategory(it) }
+            )
+        }
+    }
+
+    if (showBackupAndRestoreScreen) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showBackupAndRestoreScreen = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            com.example.ui.screens.BackupAndRestoreScreen(
+                viewModel = viewModel,
+                onBackClick = { showBackupAndRestoreScreen = false }
             )
         }
     }

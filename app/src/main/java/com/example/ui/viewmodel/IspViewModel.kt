@@ -61,7 +61,8 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
             db.billDao(),
             db.paymentDao(),
             db.settingsDao(),
-            db.expenseDao()
+            db.expenseDao(),
+            db
         )
 
         customers = repository.customers.stateIn(
@@ -339,6 +340,115 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
             if (success) {
                 _toastMessage.value = "Backup restored successfully"
             }
+        }
+    }
+
+    fun createEncryptedBackup(password: String, onComplete: (java.io.File?) -> Unit) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val app = getApplication<Application>()
+                val jsonPayload = repository.generateFullBackupJson(app)
+                val encryptedBytes = com.example.util.BackupEncryptionManager.encryptPayload(jsonPayload, password)
+
+                val backupDir = java.io.File(app.filesDir, "backups")
+                if (!backupDir.exists()) backupDir.mkdirs()
+
+                val timeStamp = java.text.SimpleDateFormat("yyyy-MM-dd-HH-mm", java.util.Locale.US).format(java.util.Date())
+                val backupFile = java.io.File(backupDir, "ISP-Billing-Backup-$timeStamp.ispbackup")
+                backupFile.writeBytes(encryptedBytes)
+
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _toastMessage.value = app.getString(com.example.R.string.backup_created_success)
+                    onComplete(backupFile)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
+    fun restoreEncryptedBackupFromUri(
+        context: android.content.Context,
+        uri: android.net.Uri,
+        password: String,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val app = getApplication<Application>()
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes() ?: throw IllegalArgumentException("Cannot read file")
+                inputStream.close()
+
+                val jsonPayload = com.example.util.BackupEncryptionManager.decryptPayload(bytes, password)
+                val success = repository.restoreFromFullBackupJson(context, jsonPayload)
+
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (success) {
+                        _toastMessage.value = app.getString(com.example.R.string.backup_restored_success)
+                        onResult(true)
+                    } else {
+                        _toastMessage.value = app.getString(com.example.R.string.invalid_backup_error)
+                        onResult(false)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _toastMessage.value = app.getString(com.example.R.string.invalid_backup_error)
+                    onResult(false)
+                }
+            }
+        }
+    }
+
+    fun restoreEncryptedBackupFromFile(
+        context: android.content.Context,
+        file: java.io.File,
+        password: String,
+        onResult: (Boolean) -> Unit
+    ) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val app = getApplication<Application>()
+            try {
+                val bytes = file.readBytes()
+                val jsonPayload = com.example.util.BackupEncryptionManager.decryptPayload(bytes, password)
+                val success = repository.restoreFromFullBackupJson(context, jsonPayload)
+
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    if (success) {
+                        _toastMessage.value = app.getString(com.example.R.string.backup_restored_success)
+                        onResult(true)
+                    } else {
+                        _toastMessage.value = app.getString(com.example.R.string.invalid_backup_error)
+                        onResult(false)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _toastMessage.value = app.getString(com.example.R.string.invalid_backup_error)
+                    onResult(false)
+                }
+            }
+        }
+    }
+
+    fun getLocalBackupFiles(): List<java.io.File> {
+        val app = getApplication<Application>()
+        val backupDir = java.io.File(app.filesDir, "backups")
+        if (!backupDir.exists()) return emptyList()
+        return backupDir.listFiles()?.filter { it.extension == "ispbackup" }?.sortedByDescending { it.lastModified() } ?: emptyList()
+    }
+
+    fun deleteLocalBackupFile(file: java.io.File): Boolean {
+        return try {
+            if (file.exists()) file.delete() else false
+        } catch (e: Exception) {
+            false
         }
     }
 }

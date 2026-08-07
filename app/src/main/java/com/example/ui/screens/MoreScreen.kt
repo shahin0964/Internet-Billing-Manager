@@ -73,7 +73,8 @@ fun MoreScreen(
     onEditPackageClick: (IspPackageEntity) -> Unit,
     onExportBackup: ((String) -> Unit) -> Unit,
     onShowToast: (String) -> Unit,
-    onOpenExpenseManagement: () -> Unit = {}
+    onOpenExpenseManagement: () -> Unit = {},
+    onOpenBackupAndRestore: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -658,6 +659,51 @@ tonalElevation = 2.dp,
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // Backup & Restore Option (Directly above App Update)
+        item {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenBackupAndRestore() },
+                shape = RoundedCornerShape(18.dp),
+                shadowElevation = 6.dp,
+                tonalElevation = 3.dp,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SectionHeader(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.backup_and_restore),
+                        subtitle = androidx.compose.ui.res.stringResource(com.example.R.string.backup_restore_subtitle)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Backup,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = "Tap to open",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
