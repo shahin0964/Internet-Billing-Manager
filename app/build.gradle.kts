@@ -21,6 +21,13 @@ android {
     versionName = System.getenv("VERSION_NAME") ?: "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    val fullRepoEnv = System.getenv("GITHUB_REPOSITORY") ?: ""
+    val defaultOwner = if (fullRepoEnv.contains("/")) fullRepoEnv.split("/")[0] else (System.getenv("GITHUB_OWNER") ?: "isp-app")
+    val defaultRepo = if (fullRepoEnv.contains("/")) fullRepoEnv.split("/")[1] else (System.getenv("GITHUB_REPO") ?: "isp-billing-app")
+
+    buildConfigField("String", "GITHUB_OWNER", "\"$defaultOwner\"")
+    buildConfigField("String", "GITHUB_REPO", "\"$defaultRepo\"")
   }
 
   signingConfigs {

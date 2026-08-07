@@ -14,6 +14,9 @@ on:
         required: false
         default: 'Production Release'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Release APK
@@ -201,7 +204,24 @@ jobs:
           name: ISP-Billing-APK
           path: release/ISP-Billing-Release.apk
 
-      - name: Create GitHub Release
+      - name: Release Diagnostics
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          echo "=== GitHub Release Diagnostics ==="
+          echo "Repository: ${{ github.repository }}"
+          echo "Release Tag: ${{ steps.versioning.outputs.tag_name }}"
+          echo "APK Filename: ISP-Billing-Release.apk"
+          echo "APK Path: release/ISP-Billing-Release.apk"
+          if [ -f "release/ISP-Billing-Release.apk" ]; then
+            SIZE=$(stat -c%s release/ISP-Billing-Release.apk || stat -f%z release/ISP-Billing-Release.apk)
+            echo "APK File Size: $SIZE bytes"
+          else
+            echo "ERROR: Production APK release/ISP-Billing-Release.apk does not exist!"
+            exit 1
+          fi
+          echo "================================="
+
+      - name: Create or Update GitHub Release
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
@@ -210,5 +230,7 @@ jobs:
           tag_name: ${{ steps.versioning.outputs.tag_name }}
           draft: false
           prerelease: false
+          make_latest: 'true'
+          token: ${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

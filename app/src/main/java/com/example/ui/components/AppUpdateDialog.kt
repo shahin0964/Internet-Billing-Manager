@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.util.AppUpdateManager
 import com.example.util.GitHubReleaseInfo
+import com.example.util.UpdateException
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -80,7 +81,18 @@ fun AppUpdateDialog(
                 releaseInfo = info
                 state = if (info.isNewer) UpdateState.NEW_AVAILABLE else UpdateState.LATEST
             }.onFailure { err ->
-                errorMessage = context.getString(R.string.unable_to_check_updates)
+                errorMessage = when (err) {
+                    is UpdateException.NoInternet -> context.getString(R.string.update_error_no_internet)
+                    is UpdateException.ReleaseNotFound -> context.getString(R.string.update_error_no_release)
+                    is UpdateException.ApkAssetNotFound -> context.getString(R.string.update_error_no_apk)
+                    is UpdateException.HttpError -> context.getString(R.string.update_error_server, "HTTP ${err.httpCode}")
+                    is UpdateException.ServerError -> context.getString(R.string.update_error_server, "HTTP ${err.httpCode}")
+                    is UpdateException.RateLimited -> context.getString(R.string.update_error_server, "Rate Limit Exceeded")
+                    is UpdateException.Timeout, is UpdateException.ConnectionFailed -> context.getString(R.string.update_error_server, "Connection Timeout")
+                    is UpdateException.SslError -> context.getString(R.string.update_error_server, "SSL Error")
+                    is UpdateException.InvalidJson -> context.getString(R.string.update_error_server, "Invalid Response")
+                    else -> err.localizedMessage ?: context.getString(R.string.unable_to_check_updates)
+                }
                 state = UpdateState.ERROR
             }
         }

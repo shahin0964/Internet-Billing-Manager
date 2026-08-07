@@ -2,24 +2,34 @@ package com.example.util
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.example.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 
 object AppUpdateConfig {
-    // Configured official GitHub repository details
-    const val GITHUB_OWNER = "isp-app"
-    const val GITHUB_REPO = "isp-billing-app"
+    val GITHUB_OWNER: String
+        get() = BuildConfig.GITHUB_OWNER.ifBlank { "isp-app" }
+
+    val GITHUB_REPO: String
+        get() = BuildConfig.GITHUB_REPO.ifBlank { "isp-billing-app" }
 }
 
 data class GitHubReleaseInfo(
@@ -30,7 +40,39 @@ data class GitHubReleaseInfo(
     val isNewer: Boolean
 )
 
+sealed class UpdateException(message: String, val errCode: String) : Exception(message) {
+    class NoInternet : UpdateException("No active internet connection available", "NO_INTERNET")
+    class ConnectionFailed(msg: String) : UpdateException(msg, "CONNECTION_FAILED")
+    class Timeout(msg: String) : UpdateException(msg, "TIMEOUT")
+    class SslError(msg: String) : UpdateException(msg, "SSL_ERROR")
+    class HttpError(val httpCode: Int, msg: String) : UpdateException(msg, "HTTP_$httpCode")
+    class ReleaseNotFound(msg: String) : UpdateException(msg, "RELEASE_NOT_FOUND")
+    class RateLimited(msg: String) : UpdateException(msg, "RATE_LIMITED")
+    class ServerError(val httpCode: Int, msg: String) : UpdateException(msg, "SERVER_ERROR")
+    class InvalidJson(msg: String) : UpdateException(msg, "INVALID_JSON")
+    class ApkAssetNotFound(msg: String) : UpdateException(msg, "APK_ASSET_NOT_FOUND")
+}
+
 object AppUpdateManager {
+
+    private const val TAG = "AppUpdateManager"
+
+    /**
+     * Check if network connectivity is available.
+     */
+    fun isNetworkAvailable(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return true
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = connectivityManager.activeNetwork ?: return false
+            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } else {
+            @Suppress("DEPRECATION")
+            val activeNetworkInfo = connectivityManager.activeNetworkInfo
+            activeNetworkInfo != null && activeNetworkInfo.isConnected
+        }
+    }
 
     /**
      * Get installed app version name safely.
@@ -45,7 +87,7 @@ object AppUpdateManager {
     }
 
     /**
-     * Compare semantic version strings (e.g. "1.1.0" vs "1.0.0").
+     * Compare semantic version strings (e.g. "1.0.9" vs "1.0.10").
      */
     fun isVersionNewer(installedVersion: String, latestVersion: String): Boolean {
         val cleanInstalled = installedVersion.trim().removePrefix("v").removePrefix("V")
@@ -74,52 +116,116 @@ object AppUpdateManager {
         owner: String = AppUpdateConfig.GITHUB_OWNER,
         repo: String = AppUpdateConfig.GITHUB_REPO
     ): Result<GitHubReleaseInfo> = withContext(Dispatchers.IO) {
+        if (!isNetworkAvailable(context)) {
+            Log.w(TAG, "Network check failed: No active internet connection")
+            return@withContext Result.failure(UpdateException.NoInternet())
+        }
+
+        val urlString = "https://api.github.com/repos/$owner/$repo/releases/latest"
+        val installedVersion = getInstalledVersion(context)
+        Log.d(TAG, "Checking updates for repo: $owner/$repo (installed: $installedVersion)")
+        Log.d(TAG, "Request URL: $urlString")
+
+        var connection: HttpURLConnection? = null
         try {
-            val urlString = "https://api.github.com/repos/$owner/$repo/releases/latest"
             val url = URL(urlString)
-            val connection = (url.openConnection() as HttpURLConnection).apply {
+            connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                connectTimeout = 10000
-                readTimeout = 10000
-                setRequestProperty("Accept", "application/vnd.github.v3+json")
+                connectTimeout = 15000
+                readTimeout = 15000
+                instanceFollowRedirects = true
+                setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("User-Agent", "Android-ISP-Billing-App")
             }
 
             val responseCode = connection.responseCode
-            if (responseCode != HttpURLConnection.HTTP_OK) {
-                return@withContext Result.failure(Exception("HTTP Error: $responseCode"))
+            val contentType = connection.contentType
+            Log.d(TAG, "HTTP Response Code: $responseCode, Content-Type: $contentType")
+
+            when (responseCode) {
+                HttpURLConnection.HTTP_OK -> {
+                    // OK
+                }
+                HttpURLConnection.HTTP_NOT_FOUND -> {
+                    Log.e(TAG, "GitHub release not found for repo $owner/$repo (HTTP 404)")
+                    return@withContext Result.failure(
+                        UpdateException.ReleaseNotFound("No release found for repository $owner/$repo")
+                    )
+                }
+                HttpURLConnection.HTTP_FORBIDDEN, 429 -> {
+                    Log.e(TAG, "GitHub API rate limit or forbidden (HTTP $responseCode)")
+                    return@withContext Result.failure(
+                        UpdateException.RateLimited("GitHub API rate limit exceeded (HTTP $responseCode)")
+                    )
+                }
+                in 500..599 -> {
+                    Log.e(TAG, "GitHub server error (HTTP $responseCode)")
+                    return@withContext Result.failure(
+                        UpdateException.ServerError(responseCode, "GitHub server error (HTTP $responseCode)")
+                    )
+                }
+                else -> {
+                    Log.e(TAG, "HTTP request failed with status $responseCode")
+                    return@withContext Result.failure(
+                        UpdateException.HttpError(responseCode, "HTTP Error: $responseCode")
+                    )
+                }
             }
 
             val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
-            val json = JSONObject(jsonString)
+            val json = try {
+                JSONObject(jsonString)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse release JSON", e)
+                return@withContext Result.failure(UpdateException.InvalidJson("Malformed JSON from release server"))
+            }
 
             val tagName = json.optString("tag_name", "")
+            val releaseName = json.optString("name", "")
             val cleanVersion = tagName.removePrefix("v").removePrefix("V")
+                .ifBlank { releaseName.removePrefix("v").removePrefix("V") }
             val releaseNotes = json.optString("body", "")
 
+            Log.d(TAG, "Release tag received: $tagName (clean: $cleanVersion)")
+
             var apkUrl: String? = null
+            var apkFilename: String? = null
+
             if (json.has("assets")) {
                 val assets = json.getJSONArray("assets")
+                Log.d(TAG, "Number of assets received: ${assets.length()}")
+
+                val apkAssets = mutableListOf<Pair<String, String>>()
                 for (i in 0 until assets.length()) {
                     val asset = assets.getJSONObject(i)
                     val assetName = asset.optString("name", "")
                     val downloadUrl = asset.optString("browser_download_url", "")
-                    if (assetName.endsWith(".apk", ignoreCase = true)) {
-                        apkUrl = downloadUrl
-                        break
+                    if (assetName.endsWith(".apk", ignoreCase = true) && downloadUrl.isNotBlank()) {
+                        apkAssets.add(Pair(assetName, downloadUrl))
                     }
                 }
-                // Fallback to first asset if no explicit .apk extension match
-                if (apkUrl == null && assets.length() > 0) {
-                    val firstAsset = assets.getJSONObject(0)
-                    if (firstAsset.has("browser_download_url")) {
-                        apkUrl = firstAsset.getString("browser_download_url")
-                    }
+
+                if (apkAssets.isNotEmpty()) {
+                    val matched = apkAssets.firstOrNull { (name, _) ->
+                        name.equals("ISP-Billing-Release.apk", ignoreCase = true) ||
+                        name.equals("InternetBillManagement.apk", ignoreCase = true)
+                    } ?: apkAssets.first()
+
+                    apkFilename = matched.first
+                    apkUrl = matched.second
                 }
             }
 
-            val installedVersion = getInstalledVersion(context)
+            Log.d(TAG, "Selected APK filename: $apkFilename, download URL: $apkUrl")
+
+            if (apkUrl.isNullOrBlank()) {
+                return@withContext Result.failure(
+                    UpdateException.ApkAssetNotFound("No APK asset found in release $tagName")
+                )
+            }
+
             val isNewer = isVersionNewer(installedVersion, cleanVersion)
+            Log.d(TAG, "Version comparison: installed=$installedVersion, latest=$cleanVersion, isNewer=$isNewer")
 
             Result.success(
                 GitHubReleaseInfo(
@@ -130,8 +236,23 @@ object AppUpdateManager {
                     isNewer = isNewer
                 )
             )
+        } catch (e: UnknownHostException) {
+            Log.e(TAG, "DNS failure / unknown host: ${e.message}")
+            Result.failure(UpdateException.ConnectionFailed("Unable to resolve GitHub host"))
+        } catch (e: SocketTimeoutException) {
+            Log.e(TAG, "Connection timeout: ${e.message}")
+            Result.failure(UpdateException.Timeout("Connection timed out"))
+        } catch (e: SSLException) {
+            Log.e(TAG, "SSL error: ${e.message}")
+            Result.failure(UpdateException.SslError("Secure connection error"))
+        } catch (e: IOException) {
+            Log.e(TAG, "I/O error contacting GitHub API: ${e.message}")
+            Result.failure(UpdateException.ConnectionFailed(e.message ?: "Network error"))
         } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error checking updates: ${e.message}", e)
             Result.failure(e)
+        } finally {
+            connection?.disconnect()
         }
     }
 
@@ -143,7 +264,12 @@ object AppUpdateManager {
         downloadUrl: String,
         onProgress: (Int) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
+        if (!isNetworkAvailable(context)) {
+            return@withContext Result.failure(UpdateException.NoInternet())
+        }
+
         try {
+            Log.d(TAG, "Starting APK download from URL: $downloadUrl")
             var currentUrl = downloadUrl
             var connection: HttpURLConnection
             var redirectCount = 0
@@ -158,6 +284,8 @@ object AppUpdateManager {
                 connection.setRequestProperty("User-Agent", "Android-ISP-Billing-App")
 
                 val status = connection.responseCode
+                Log.d(TAG, "Download HTTP status: $status")
+
                 if (status == HttpURLConnection.HTTP_MOVED_TEMP ||
                     status == HttpURLConnection.HTTP_MOVED_PERM ||
                     status == HttpURLConnection.HTTP_SEE_OTHER ||
@@ -219,8 +347,10 @@ object AppUpdateManager {
                 return@withContext Result.failure(Exception("Downloaded file is corrupt or not a valid APK package"))
             }
 
+            Log.d(TAG, "APK download completed: ${outputFile.absolutePath} (${outputFile.length()} bytes)")
             Result.success(outputFile)
         } catch (e: Exception) {
+            Log.e(TAG, "Error downloading APK: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -259,7 +389,6 @@ object AppUpdateManager {
             intent.setDataAndType(apkUri, "application/vnd.android.package-archive")
             intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
 
-            // Grant URI permission explicitly to all handling activities (PackageInstaller)
             val resInfoList = context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
             for (resolveInfo in resInfoList) {
                 val packageName = resolveInfo.activityInfo.packageName
@@ -268,7 +397,7 @@ object AppUpdateManager {
 
             context.startActivity(intent)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Unable to launch package installer", e)
             Toast.makeText(context, "Unable to launch installer: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
