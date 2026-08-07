@@ -48,12 +48,38 @@ jobs:
       - name: Decode Keystore
         if: ${{ env.KEYSTORE_BASE64 != '' }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          echo "$KEYSTORE_BASE64" | base64 --decode > ${{ github.workspace }}/release.keystore
+
+      - name: Determine Versioning
+        id: versioning
+        run: |
+          RUN_NUM="${{ github.run_number }}"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG_NAME="${{ github.ref_name }}"
+            VER_NAME=$(echo "$TAG_NAME" | sed 's/^[vV]//')
+            
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VER_NAME"
+            MAJOR=${MAJOR:-1}
+            MINOR=${MINOR:-0}
+            PATCH=${PATCH:-0}
+            CALC_CODE=$((MAJOR * 100000 + MINOR * 1000 + PATCH * 10 + RUN_NUM))
+            
+            echo "VERSION_NAME=$VER_NAME" >> $GITHUB_ENV
+            echo "VERSION_CODE=$CALC_CODE" >> $GITHUB_ENV
+            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          else
+            VER_NAME="1.0.${RUN_NUM}"
+            CALC_CODE="${RUN_NUM}"
+            
+            echo "VERSION_NAME=$VER_NAME" >> $GITHUB_ENV
+            echo "VERSION_CODE=$CALC_CODE" >> $GITHUB_ENV
+            echo "tag_name=v$VER_NAME" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build Release APK
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            export KEYSTORE_PATH="release.keystore"
+            export KEYSTORE_PATH="${{ github.workspace }}/release.keystore"
           fi
           if [ -f "./gradlew" ]; then
             ./gradlew :app:assembleRelease --stacktrace
@@ -83,6 +109,25 @@ jobs:
           cp "$FOUND_APK" "release/ISP-Billing-Release.apk"
           cp "$FOUND_APK" "app/build/outputs/apk/release/ISP-Billing-Release.apk"
 
+      - name: Verify Release APK
+        run: |
+          APK_PATH="release/ISP-Billing-Release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "ERROR: Production APK file missing!"
+            exit 1
+          fi
+
+          FILE_SIZE=$(stat -c%s "$APK_PATH" || stat -f%z "$APK_PATH")
+          echo "Production APK File Size: $FILE_SIZE bytes"
+          if [ "$FILE_SIZE" -lt 1000000 ]; then
+            echo "ERROR: Generated APK is under 1MB and appears incomplete or invalid!"
+            exit 1
+          fi
+
+          echo "Testing APK ZIP structure..."
+          unzip -t "$APK_PATH" > /dev/null
+          echo "Production APK structure verification passed!"
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -94,8 +139,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release/ISP-Billing-Release.apk
-          name: ${{ github.event.inputs.release_title || github.ref_name }}
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v1.0.{0}', github.run_number) }}
+          name: ${{ github.event.inputs.release_title || steps.versioning.outputs.tag_name }}
+          tag_name: ${{ steps.versioning.outputs.tag_name }}
           draft: false
           prerelease: false
         env:

@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.ispbilling.control"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+    versionName = System.getenv("VERSION_NAME") ?: "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -37,6 +37,8 @@ android {
         storePassword = storePasswordEnv
         keyAlias = if (!keyAliasEnv.isNullOrEmpty()) keyAliasEnv else "upload"
         keyPassword = if (!keyPasswordEnv.isNullOrEmpty()) keyPasswordEnv else storePasswordEnv
+        enableV1Signing = true
+        enableV2Signing = true
       }
     }
   }

@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.Settings
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -142,11 +144,41 @@ object AppUpdateManager {
         onProgress: (Int) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            val url = URL(downloadUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 30000
-            connection.connect()
+            var currentUrl = downloadUrl
+            var connection: HttpURLConnection
+            var redirectCount = 0
+            val maxRedirects = 5
+
+            while (true) {
+                val url = URL(currentUrl)
+                connection = url.openConnection() as HttpURLConnection
+                connection.connectTimeout = 15000
+                connection.readTimeout = 30000
+                connection.instanceFollowRedirects = true
+                connection.setRequestProperty("User-Agent", "Android-ISP-Billing-App")
+
+                val status = connection.responseCode
+                if (status == HttpURLConnection.HTTP_MOVED_TEMP ||
+                    status == HttpURLConnection.HTTP_MOVED_PERM ||
+                    status == HttpURLConnection.HTTP_SEE_OTHER ||
+                    status == 307 || status == 308
+                ) {
+                    if (redirectCount >= maxRedirects) {
+                        return@withContext Result.failure(Exception("Too many redirects downloading APK"))
+                    }
+                    val loc = connection.getHeaderField("Location")
+                    if (loc.isNullOrBlank()) {
+                        return@withContext Result.failure(Exception("Redirect location missing"))
+                    }
+                    currentUrl = loc
+                    redirectCount++
+                    connection.disconnect()
+                } else if (status == HttpURLConnection.HTTP_OK) {
+                    break
+                } else {
+                    return@withContext Result.failure(Exception("Failed to download APK: HTTP $status"))
+                }
+            }
 
             val fileLength = connection.contentLength
             val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
@@ -158,7 +190,7 @@ object AppUpdateManager {
 
             connection.inputStream.use { input ->
                 FileOutputStream(outputFile).use { output ->
-                    val data = ByteArray(4096)
+                    val data = ByteArray(8192)
                     var total: Long = 0
                     var count: Int
                     while (input.read(data).also { count = it } != -1) {
@@ -175,6 +207,18 @@ object AppUpdateManager {
                 }
             }
 
+            if (!outputFile.exists() || outputFile.length() == 0L) {
+                return@withContext Result.failure(Exception("Downloaded APK file is missing or empty"))
+            }
+
+            // Verify header: valid APK must be a ZIP archive starting with PK\x03\x04
+            val header = ByteArray(4)
+            outputFile.inputStream().use { it.read(header) }
+            if (header[0] != 0x50.toByte() || header[1] != 0x4B.toByte() || header[2] != 0x03.toByte() || header[3] != 0x04.toByte()) {
+                outputFile.delete()
+                return@withContext Result.failure(Exception("Downloaded file is corrupt or not a valid APK package"))
+            }
+
             Result.success(outputFile)
         } catch (e: Exception) {
             Result.failure(e)
@@ -186,6 +230,21 @@ object AppUpdateManager {
      */
     fun installApk(context: Context, apkFile: File) {
         try {
+            if (!apkFile.exists() || apkFile.length() == 0L) {
+                Toast.makeText(context, "APK file is invalid or missing", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+                val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(settingsIntent)
+                Toast.makeText(context, "Please allow installation from this source", Toast.LENGTH_LONG).show()
+                return
+            }
+
             val intent = Intent(Intent.ACTION_VIEW)
             val apkUri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 FileProvider.getUriForFile(
@@ -198,10 +257,19 @@ object AppUpdateManager {
             }
 
             intent.setDataAndType(apkUri, "application/vnd.android.package-archive")
-            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+            intent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+
+            // Grant URI permission explicitly to all handling activities (PackageInstaller)
+            val resInfoList = context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+            for (resolveInfo in resInfoList) {
+                val packageName = resolveInfo.activityInfo.packageName
+                context.grantUriPermission(packageName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
             context.startActivity(intent)
         } catch (e: Exception) {
             e.printStackTrace()
+            Toast.makeText(context, "Unable to launch installer: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }
