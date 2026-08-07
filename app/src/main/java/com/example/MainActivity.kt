@@ -57,6 +57,7 @@ import com.example.ui.screens.CollectionScreen
 import com.example.ui.screens.CustomersScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.DueManagementScreen
+import com.example.ui.screens.ExpenseManagementScreen
 import com.example.ui.screens.MoreScreen
 import com.example.ui.theme.IspControlTheme
 import com.example.ui.viewmodel.IspViewModel
@@ -118,6 +119,8 @@ fun MainAppContent(viewModel: IspViewModel) {
     val bills by viewModel.bills.collectAsStateWithLifecycle()
     val payments by viewModel.payments.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val expenses by viewModel.expenses.collectAsStateWithLifecycle()
+    val expenseCategories by viewModel.expenseCategories.collectAsStateWithLifecycle()
 
     val customerQuery by viewModel.customerSearchQuery.collectAsStateWithLifecycle()
     val customerStatusFilter by viewModel.customerStatusFilter.collectAsStateWithLifecycle()
@@ -128,6 +131,9 @@ fun MainAppContent(viewModel: IspViewModel) {
 
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Navigation & Overlay state
+    var showExpenseManagementScreen by remember { mutableStateOf(false) }
 
     // Dialog state
     var showCustomerDialog by remember { mutableStateOf(false) }
@@ -208,6 +214,7 @@ fun MainAppContent(viewModel: IspViewModel) {
                         customers = customers,
                         bills = bills,
                         payments = payments,
+                        expenses = expenses,
                         settings = settings,
                         onNavigateToCustomers = { currentTab = NavTab.CUSTOMERS },
                         onNavigateToBilling = { currentTab = NavTab.BILLING },
@@ -309,10 +316,33 @@ fun MainAppContent(viewModel: IspViewModel) {
                         },
                         onShowToast = { msg ->
                             viewModel.showToast(msg)
+                        },
+                        onOpenExpenseManagement = {
+                            showExpenseManagementScreen = true
                         }
                     )
                 }
             }
+        }
+    }
+
+    if (showExpenseManagementScreen) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showExpenseManagementScreen = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            ExpenseManagementScreen(
+                expenses = expenses,
+                customCategories = expenseCategories,
+                currencySymbol = settings.currencySymbol,
+                onBackClick = { showExpenseManagementScreen = false },
+                onSaveExpense = { viewModel.saveExpense(it) },
+                onUpdateExpense = { viewModel.updateExpense(it) },
+                onDeleteExpense = { viewModel.deleteExpense(it) },
+                onAddCustomCategory = { viewModel.addCustomCategory(it) }
+            )
         }
     }
 

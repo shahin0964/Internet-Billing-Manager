@@ -147,25 +147,25 @@ object AppUpdateManager {
                     // OK
                 }
                 HttpURLConnection.HTTP_NOT_FOUND -> {
-                    Log.e(TAG, "GitHub release not found for repo $owner/$repo (HTTP 404)")
+                    Log.w(TAG, "GitHub release not found for repo $owner/$repo (HTTP 404)")
                     return@withContext Result.failure(
                         UpdateException.ReleaseNotFound("No release found for repository $owner/$repo")
                     )
                 }
                 HttpURLConnection.HTTP_FORBIDDEN, 429 -> {
-                    Log.e(TAG, "GitHub API rate limit or forbidden (HTTP $responseCode)")
+                    Log.w(TAG, "GitHub API rate limit or forbidden (HTTP $responseCode)")
                     return@withContext Result.failure(
                         UpdateException.RateLimited("GitHub API rate limit exceeded (HTTP $responseCode)")
                     )
                 }
                 in 500..599 -> {
-                    Log.e(TAG, "GitHub server error (HTTP $responseCode)")
+                    Log.w(TAG, "GitHub server error (HTTP $responseCode)")
                     return@withContext Result.failure(
                         UpdateException.ServerError(responseCode, "GitHub server error (HTTP $responseCode)")
                     )
                 }
                 else -> {
-                    Log.e(TAG, "HTTP request failed with status $responseCode")
+                    Log.w(TAG, "HTTP request failed with status $responseCode")
                     return@withContext Result.failure(
                         UpdateException.HttpError(responseCode, "HTTP Error: $responseCode")
                     )
@@ -176,7 +176,7 @@ object AppUpdateManager {
             val json = try {
                 JSONObject(jsonString)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse release JSON", e)
+                Log.w(TAG, "Failed to parse release JSON", e)
                 return@withContext Result.failure(UpdateException.InvalidJson("Malformed JSON from release server"))
             }
 
@@ -237,19 +237,19 @@ object AppUpdateManager {
                 )
             )
         } catch (e: UnknownHostException) {
-            Log.e(TAG, "DNS failure / unknown host: ${e.message}")
+            Log.w(TAG, "DNS failure / unknown host: ${e.message}")
             Result.failure(UpdateException.ConnectionFailed("Unable to resolve GitHub host"))
         } catch (e: SocketTimeoutException) {
-            Log.e(TAG, "Connection timeout: ${e.message}")
+            Log.w(TAG, "Connection timeout: ${e.message}")
             Result.failure(UpdateException.Timeout("Connection timed out"))
         } catch (e: SSLException) {
-            Log.e(TAG, "SSL error: ${e.message}")
+            Log.w(TAG, "SSL error: ${e.message}")
             Result.failure(UpdateException.SslError("Secure connection error"))
         } catch (e: IOException) {
-            Log.e(TAG, "I/O error contacting GitHub API: ${e.message}")
+            Log.w(TAG, "I/O error contacting GitHub API: ${e.message}")
             Result.failure(UpdateException.ConnectionFailed(e.message ?: "Network error"))
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error checking updates: ${e.message}", e)
+            Log.w(TAG, "Unexpected error checking updates: ${e.message}", e)
             Result.failure(e)
         } finally {
             connection?.disconnect()

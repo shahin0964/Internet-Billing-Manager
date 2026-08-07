@@ -3,11 +3,14 @@ package com.example.data.repository
 import com.example.data.dao.BillDao
 import com.example.data.dao.BusinessSettingsDao
 import com.example.data.dao.CustomerDao
+import com.example.data.dao.ExpenseDao
 import com.example.data.dao.IspPackageDao
 import com.example.data.dao.PaymentDao
 import com.example.data.model.BillEntity
 import com.example.data.model.BusinessSettingsEntity
 import com.example.data.model.CustomerEntity
+import com.example.data.model.ExpenseCategoryEntity
+import com.example.data.model.ExpenseEntity
 import com.example.data.model.IspPackageEntity
 import com.example.data.model.PaymentEntity
 import kotlinx.coroutines.flow.Flow
@@ -23,16 +26,35 @@ class IspRepository(
     private val packageDao: IspPackageDao,
     private val billDao: BillDao,
     private val paymentDao: PaymentDao,
-    private val settingsDao: BusinessSettingsDao
+    private val settingsDao: BusinessSettingsDao,
+    private val expenseDao: ExpenseDao
 ) {
     val customers: Flow<List<CustomerEntity>> = customerDao.getAllCustomers()
     val packages: Flow<List<IspPackageEntity>> = packageDao.getAllPackages()
     val bills: Flow<List<BillEntity>> = billDao.getAllBills()
     val payments: Flow<List<PaymentEntity>> = paymentDao.getAllPayments()
     val settings: Flow<BusinessSettingsEntity?> = settingsDao.getSettings()
+    val expenses: Flow<List<ExpenseEntity>> = expenseDao.getAllExpenses()
+    val expenseCategories: Flow<List<ExpenseCategoryEntity>> = expenseDao.getAllCategories()
 
     fun getCollectedAmountForDate(date: String): Flow<Double> {
         return paymentDao.getCollectedAmountForDate(date)
+    }
+
+    suspend fun saveExpense(expense: ExpenseEntity): Long {
+        return expenseDao.insertExpense(expense)
+    }
+
+    suspend fun updateExpense(expense: ExpenseEntity) {
+        expenseDao.updateExpense(expense)
+    }
+
+    suspend fun deleteExpense(expense: ExpenseEntity) {
+        expenseDao.deleteExpense(expense)
+    }
+
+    suspend fun saveExpenseCategory(categoryName: String): Long {
+        return expenseDao.insertCategory(ExpenseCategoryEntity(name = categoryName.trim()))
     }
 
     suspend fun saveCustomer(customer: CustomerEntity): Long {
@@ -173,6 +195,8 @@ class IspRepository(
         val bls = bills.first()
         val pymts = payments.first()
         val sttngs = settings.first()
+        val exps = expenses.first()
+        val cats = expenseCategories.first()
 
         val root = JSONObject()
         val custArray = JSONArray()
@@ -205,11 +229,89 @@ class IspRepository(
             pkgArray.put(obj)
         }
 
+        val expArray = JSONArray()
+        exps.forEach { e ->
+            val obj = JSONObject()
+            obj.put("id", e.id)
+            obj.put("title", e.title)
+            obj.put("amount", e.amount)
+            obj.put("category", e.category)
+            obj.put("date", e.date)
+            obj.put("paymentMethod", e.paymentMethod)
+            obj.put("note", e.note)
+            obj.put("receiptPath", e.receiptPath ?: "")
+            obj.put("createdAt", e.createdAt)
+            obj.put("updatedAt", e.updatedAt)
+            expArray.put(obj)
+        }
+
+        val catArray = JSONArray()
+        cats.forEach { c ->
+            val obj = JSONObject()
+            obj.put("id", c.id)
+            obj.put("name", c.name)
+            catArray.put(obj)
+        }
+
         root.put("customers", custArray)
         root.put("packages", pkgArray)
+        root.put("expenses", expArray)
+        root.put("expenseCategories", catArray)
         root.put("billsCount", bls.size)
         root.put("paymentsCount", pymts.size)
         root.put("exportedAt", System.currentTimeMillis())
         return root.toString(2)
+    }
+
+    suspend fun importDataJson(jsonStr: String): Boolean {
+        return try {
+            val root = JSONObject(jsonStr)
+
+            if (root.has("expenses")) {
+                val expArray = root.getJSONArray("expenses")
+                val expenseList = mutableListOf<ExpenseEntity>()
+                for (i in 0 until expArray.length()) {
+                    val obj = expArray.getJSONObject(i)
+                    expenseList.add(
+                        ExpenseEntity(
+                            id = if (obj.has("id")) obj.getLong("id") else 0L,
+                            title = obj.optString("title", ""),
+                            amount = obj.optDouble("amount", 0.0),
+                            category = obj.optString("category", "Other"),
+                            date = obj.optString("date", ""),
+                            paymentMethod = obj.optString("paymentMethod", "Cash"),
+                            note = obj.optString("note", ""),
+                            receiptPath = obj.optString("receiptPath", "").ifEmpty { null },
+                            createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
+                            updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
+                        )
+                    )
+                }
+                if (expenseList.isNotEmpty()) {
+                    expenseDao.insertExpenses(expenseList)
+                }
+            }
+
+            if (root.has("expenseCategories")) {
+                val catArray = root.getJSONArray("expenseCategories")
+                val catList = mutableListOf<ExpenseCategoryEntity>()
+                for (i in 0 until catArray.length()) {
+                    val obj = catArray.getJSONObject(i)
+                    catList.add(
+                        ExpenseCategoryEntity(
+                            id = if (obj.has("id")) obj.getLong("id") else 0L,
+                            name = obj.optString("name", "")
+                        )
+                    )
+                }
+                if (catList.isNotEmpty()) {
+                    expenseDao.insertCategories(catList)
+                }
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 }

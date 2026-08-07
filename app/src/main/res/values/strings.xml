@@ -197,6 +197,65 @@
     <string name="download_complete">Download complete. Tap Install to update.</string>
     <string name="install">Install</string>
 
+    <!-- Expense Management Strings -->
+    <string name="expense_management">Expense Management</string>
+    <string name="expense_management_subtitle">Track and manage all business expenses</string>
+    <string name="total_expenses">Total Expenses</string>
+    <string name="number_of_expenses">Total Count</string>
+    <string name="highest_expense">Highest Expense</string>
+    <string name="average_expense">Average Expense</string>
+    <string name="expense_breakdown">Expense Breakdown</string>
+    <string name="add_expense">Add Expense</string>
+    <string name="edit_expense">Edit Expense</string>
+    <string name="expense_details">Expense Details</string>
+    <string name="expense_title">Expense Title *</string>
+    <string name="amount_req">Amount *</string>
+    <string name="category_req">Category *</string>
+    <string name="expense_date">Expense Date *</string>
+    <string name="reference_note">Reference / Note</string>
+    <string name="receipt">Receipt / Attachment</string>
+    <string name="attach_receipt">Attach Receipt</string>
+    <string name="view_receipt">View Receipt</string>
+    <string name="remove_receipt">Remove Receipt</string>
+    <string name="add_custom_category">Add Category</string>
+    <string name="category_name">Category Name *</string>
+    <string name="no_expenses_found">No expenses recorded yet</string>
+    <string name="monthly_trend">Expense Analytics &amp; Trend</string>
+    <string name="expense_comparison">Expense Comparison</string>
+    <string name="current_month">Current Month</string>
+    <string name="net_collection">Net Collection</string>
+    <string name="monthly_expenses">Monthly Expenses</string>
+    <string name="delete_expense_title">Delete Expense</string>
+    <string name="delete_expense_confirm">Delete this expense? This action cannot be undone.</string>
+    <string name="delete">Delete</string>
+    <string name="save">Save</string>
+    <string name="all_categories">All Categories</string>
+    <string name="select_month">Select Month</string>
+    <string name="cat_bandwidth">Bandwidth / Internet</string>
+    <string name="cat_staff_salary">Staff Salary</string>
+    <string name="cat_electricity">Electricity</string>
+    <string name="cat_equipment">Equipment</string>
+    <string name="cat_server_hosting">Server / Hosting</string>
+    <string name="cat_office_rent">Office Rent</string>
+    <string name="cat_transport">Transport</string>
+    <string name="cat_maintenance">Maintenance</string>
+    <string name="cat_marketing">Marketing</string>
+    <string name="cat_software_sub">Software / Subscription</string>
+    <string name="cat_other">Other</string>
+    <string name="pm_cash">Cash</string>
+    <string name="pm_bank">Bank</string>
+    <string name="pm_mobile_banking">Mobile Banking</string>
+    <string name="pm_card">Card</string>
+    <string name="pm_other">Other</string>
+    <string name="err_title_required">Expense title is required</string>
+    <string name="err_amount_invalid">Please enter a valid positive amount</string>
+    <string name="err_category_required">Please select or enter a category</string>
+    <string name="msg_expense_added">Expense added successfully</string>
+    <string name="msg_expense_updated">Expense updated successfully</string>
+    <string name="msg_expense_deleted">Expense deleted successfully</string>
+    <string name="msg_category_added">New category added</string>
+    <string name="all_months">All Months</string>
+    <string name="no_prev_month_data">No data for previous month comparison</string>
 </resources>
 
 

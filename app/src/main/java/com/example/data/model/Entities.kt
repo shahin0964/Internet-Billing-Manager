@@ -69,3 +69,23 @@ data class BusinessSettingsEntity(
     val themeMode: String = "SYSTEM", // SYSTEM, DARK, LIGHT
     val logoUri: String? = null
 )
+
+@Entity(tableName = "expenses")
+data class ExpenseEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val title: String,
+    val amount: Double,
+    val category: String,
+    val date: String, // e.g., "yyyy-MM-dd"
+    val paymentMethod: String = "Cash", // Cash, Bank, Mobile Banking, Card, Other
+    val note: String = "",
+    val receiptPath: String? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "expense_categories")
+data class ExpenseCategoryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String
+)

@@ -72,10 +72,10 @@ fun MoreScreen(
     onAddPackageClick: () -> Unit,
     onEditPackageClick: (IspPackageEntity) -> Unit,
     onExportBackup: ((String) -> Unit) -> Unit,
-    onShowToast: (String) -> Unit
+    onShowToast: (String) -> Unit,
+    onOpenExpenseManagement: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val msgDbCopied = androidx.compose.ui.res.stringResource(com.example.R.string.msg_db_copied)
 
     var ispName by remember(settings) { mutableStateOf(settings.ispName) }
     var hotline by remember(settings) { mutableStateOf(settings.hotline) }
@@ -459,7 +459,11 @@ tonalElevation = 2.dp,
                     )
                 ) {
                     AdvancedFeaturesScreen(
-                        onBackClick = { showAdvancedFeaturesScreen = false }
+                        onBackClick = { showAdvancedFeaturesScreen = false },
+                        onOpenExpenseManagement = {
+                            showAdvancedFeaturesScreen = false
+                            onOpenExpenseManagement()
+                        }
                     )
                 }
             }
@@ -490,58 +494,6 @@ tonalElevation = 2.dp,
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Tune,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Icon(
-                            imageVector = Icons.Default.TouchApp,
-                            contentDescription = "Tap to open",
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-
-        // App Update Card
-        item {
-            var showUpdateDialog by remember { mutableStateOf(false) }
-
-            if (showUpdateDialog) {
-                AppUpdateDialog(
-                    onDismissRequest = { showUpdateDialog = false }
-                )
-            }
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showUpdateDialog = true },
-                shape = RoundedCornerShape(18.dp),
-                shadowElevation = 6.dp,
-                tonalElevation = 3.dp,
-                color = MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    SectionHeader(
-                        title = androidx.compose.ui.res.stringResource(com.example.R.string.app_update)
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.SystemUpdate,
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.primary
@@ -711,66 +663,45 @@ tonalElevation = 2.dp,
             }
         }
 
-        // Backup & System Utilities Card
+        // App Update Option (Bottom)
         item {
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showUpdateDialog = true },
                 shape = RoundedCornerShape(18.dp),
-shadowElevation = 3.dp,
-tonalElevation = 2.dp,
+                shadowElevation = 6.dp,
+                tonalElevation = 3.dp,
                 color = MaterialTheme.colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
                     MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
                 )
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader(title = androidx.compose.ui.res.stringResource(com.example.R.string.data_utilities_backup))
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Button(
-                        onClick = {
-                            onExportBackup { json ->
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clip = ClipData.newPlainText("ISP Backup JSON", json)
-                                clipboard.setPrimaryClip(clip)
-                                onShowToast(msgDbCopied)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Backup,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(androidx.compose.ui.res.stringResource(com.example.R.string.export_json_backup))
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Button(
-                        onClick = { showUpdateDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SectionHeader(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.app_update)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.SystemUpdate,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(androidx.compose.ui.res.stringResource(com.example.R.string.check_for_update))
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = "Tap to open",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

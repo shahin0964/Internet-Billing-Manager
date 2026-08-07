@@ -8,6 +8,8 @@ import com.example.data.database.IspDatabase
 import com.example.data.model.BillEntity
 import com.example.data.model.BusinessSettingsEntity
 import com.example.data.model.CustomerEntity
+import com.example.data.model.ExpenseCategoryEntity
+import com.example.data.model.ExpenseEntity
 import com.example.data.model.IspPackageEntity
 import com.example.data.model.PaymentEntity
 import com.example.data.repository.IspRepository
@@ -34,6 +36,8 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
     val payments: StateFlow<List<PaymentEntity>>
     val settings: StateFlow<BusinessSettingsEntity>
     val todayCollectionAmount: StateFlow<Double>
+    val expenses: StateFlow<List<ExpenseEntity>>
+    val expenseCategories: StateFlow<List<ExpenseCategoryEntity>>
 
     // UI state filters & queries
     val customerSearchQuery = MutableStateFlow("")
@@ -56,7 +60,8 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
             db.packageDao(),
             db.billDao(),
             db.paymentDao(),
-            db.settingsDao()
+            db.settingsDao(),
+            db.expenseDao()
         )
 
         customers = repository.customers.stateIn(
@@ -72,6 +77,14 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
         )
 
         payments = repository.payments.stateIn(
+            viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        )
+
+        expenses = repository.expenses.stateIn(
+            viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+        )
+
+        expenseCategories = repository.expenseCategories.stateIn(
             viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
         )
 
@@ -288,6 +301,44 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
             val json = repository.exportDataJson()
             onResult(json)
             _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_backup_ready)
+        }
+    }
+
+    fun saveExpense(expense: ExpenseEntity) {
+        viewModelScope.launch {
+            repository.saveExpense(expense)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_expense_added)
+        }
+    }
+
+    fun updateExpense(expense: ExpenseEntity) {
+        viewModelScope.launch {
+            repository.updateExpense(expense)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_expense_updated)
+        }
+    }
+
+    fun deleteExpense(expense: ExpenseEntity) {
+        viewModelScope.launch {
+            repository.deleteExpense(expense)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_expense_deleted)
+        }
+    }
+
+    fun addCustomCategory(categoryName: String) {
+        if (categoryName.isBlank()) return
+        viewModelScope.launch {
+            repository.saveExpenseCategory(categoryName)
+            _toastMessage.value = getApplication<Application>().getString(com.example.R.string.msg_category_added)
+        }
+    }
+
+    fun importBackup(jsonString: String) {
+        viewModelScope.launch {
+            val success = repository.importDataJson(jsonString)
+            if (success) {
+                _toastMessage.value = "Backup restored successfully"
+            }
         }
     }
 }

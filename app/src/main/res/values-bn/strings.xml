@@ -193,6 +193,65 @@
     <string name="download_complete">ডাউনলোড সম্পন্ন হয়েছে। ইনস্টল করতে ট্যাপ করুন।</string>
     <string name="install">ইনস্টল</string>
 
+    <!-- Expense Management Strings -->
+    <string name="expense_management">খরচ ব্যবস্থাপনা</string>
+    <string name="expense_management_subtitle">ব্যবসার সকল খরচ পরিচালনা করুন</string>
+    <string name="total_expenses">মোট খরচ</string>
+    <string name="number_of_expenses">খরচের সংখ্যা</string>
+    <string name="highest_expense">সর্বোচ্চ খরচ</string>
+    <string name="average_expense">গড় খরচ</string>
+    <string name="expense_breakdown">খরচের ক্যাটাগরি বিবরণ</string>
+    <string name="add_expense">খরচ যোগ করুন</string>
+    <string name="edit_expense">খরচ সম্পাদনা করুন</string>
+    <string name="expense_details">খরচের বিস্তারিত</string>
+    <string name="expense_title">খরচের বিবরণ *</string>
+    <string name="amount_req">পরিমাণ *</string>
+    <string name="category_req">ক্যাটাগরি *</string>
+    <string name="expense_date">তারিখ *</string>
+    <string name="reference_note">রেফারেন্স / নোট</string>
+    <string name="receipt">রশিদ / সংযুক্তি</string>
+    <string name="attach_receipt">রশিদ যুক্ত করুন</string>
+    <string name="view_receipt">রশিদ দেখুন</string>
+    <string name="remove_receipt">রশিদ সরান</string>
+    <string name="add_custom_category">ক্যাটাগরি যোগ করুন</string>
+    <string name="category_name">ক্যাটাগরির নাম *</string>
+    <string name="no_expenses_found">এখনও কোন খরচ লিপিবদ্ধ করা হয়নি</string>
+    <string name="monthly_trend">খরচ বিশ্লেষণ ও ট্রেন্ড</string>
+    <string name="expense_comparison">খরচের তুলনা</string>
+    <string name="current_month">বর্তমান মাস</string>
+    <string name="net_collection">নিট কালেকশন</string>
+    <string name="monthly_expenses">মাসিক খরচ</string>
+    <string name="delete_expense_title">খরচ মুছে ফেলুন</string>
+    <string name="delete_expense_confirm">এই খরচটি মুছে ফেলবেন? এই কাজটি আর ফিরিয়ে আনা যাবে না।</string>
+    <string name="delete">মুছে ফেলুন</string>
+    <string name="save">সংরক্ষণ করুন</string>
+    <string name="all_categories">সকল ক্যাটাগরি</string>
+    <string name="select_month">মাস নির্বাচন</string>
+    <string name="cat_bandwidth">ব্যান্ডউইথ / ইন্টারনেট</string>
+    <string name="cat_staff_salary">স্টাফ স্যালারি</string>
+    <string name="cat_electricity">বিদ্যুৎ বিল</string>
+    <string name="cat_equipment">ইকুইপমেন্ট ক্রয়</string>
+    <string name="cat_server_hosting">সার্ভার / হোস্টিং</string>
+    <string name="cat_office_rent">অফিস ভাড়া</string>
+    <string name="cat_transport">যাতায়াত খরচ</string>
+    <string name="cat_maintenance">মেরামত ও রক্ষণাবেক্ষণ</string>
+    <string name="cat_marketing">মার্কেটিং ও প্রচার</string>
+    <string name="cat_software_sub">সফটওয়্যার / সাবস্ক্রিপশন</string>
+    <string name="cat_other">অন্যান্য</string>
+    <string name="pm_cash">ক্যাশ</string>
+    <string name="pm_bank">ব্যাংক</string>
+    <string name="pm_mobile_banking">মোবাইল ব্যাংকিং</string>
+    <string name="pm_card">কার্ড</string>
+    <string name="pm_other">অন্যান্য</string>
+    <string name="err_title_required">খরচের শিরোনাম আবশ্যক</string>
+    <string name="err_amount_invalid">সঠিক ইতিবাচক পরিমাণ দিন</string>
+    <string name="err_category_required">ক্যাটাগরি নির্বাচন করুন</string>
+    <string name="msg_expense_added">খরচ সফলভাবে যুক্ত হয়েছে</string>
+    <string name="msg_expense_updated">খরচ আপডেট করা হয়েছে</string>
+    <string name="msg_expense_deleted">খরচ মুছে ফেলা হয়েছে</string>
+    <string name="msg_category_added">নতুন ক্যাটাগরি যুক্ত হয়েছে</string>
+    <string name="all_months">সব মাস</string>
+    <string name="no_prev_month_data">পূর্ববর্তী মাসের তুলনামূলক তথ্য পাওয়া যায়নি</string>
 </resources>
 
 

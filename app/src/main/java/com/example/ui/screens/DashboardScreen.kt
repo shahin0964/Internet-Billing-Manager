@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.BillEntity
 import com.example.data.model.BusinessSettingsEntity
 import com.example.data.model.CustomerEntity
+import com.example.data.model.ExpenseEntity
 import com.example.data.model.PaymentEntity
 import com.example.ui.components.KpiCard
 import com.example.ui.components.QuickActionButton
@@ -67,6 +68,7 @@ fun DashboardScreen(
     customers: List<CustomerEntity>,
     bills: List<BillEntity>,
     payments: List<PaymentEntity>,
+    expenses: List<ExpenseEntity> = emptyList(),
     settings: BusinessSettingsEntity,
     onNavigateToCustomers: () -> Unit,
     onNavigateToBilling: () -> Unit,
@@ -79,6 +81,7 @@ fun DashboardScreen(
     val activeCount = customers.count { it.status == "ACTIVE" }
     val totalCount = customers.size
     val currentMonthStr = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
+    val currentMonthIso = SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date())
     val monthlyBillAmount = bills.filter { it.billingMonth.equals(currentMonthStr, ignoreCase = true) }.sumOf { it.amount }
 
     val currency = settings.currencySymbol
@@ -89,6 +92,9 @@ fun DashboardScreen(
     
     val todayDateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     val todayCollectionAmount = payments.filter { it.paymentDate == todayDateStr }.sumOf { it.amount }
+
+    val monthlyExpensesAmount = expenses.filter { it.date.startsWith(currentMonthIso) }.sumOf { it.amount }
+    val netCollectionAmount = totalCollectedAmount - expenses.sumOf { it.amount }
 
     val sdf = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault())
     val currentDateStr = sdf.format(Date())
@@ -259,6 +265,26 @@ tonalElevation = 2.dp,
                         value = "$currency${todayCollectionAmount.formatAmount()}",
                         icon = Icons.Default.Payments,
                         iconColor = EmeraldSuccess,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    KpiCard(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.monthly_expenses),
+                        value = "$currency${monthlyExpensesAmount.formatAmount()}",
+                        icon = Icons.Default.MoneyOff,
+                        iconColor = CrimsonDanger,
+                        modifier = Modifier.weight(1f)
+                    )
+                    KpiCard(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.net_collection),
+                        value = "$currency${netCollectionAmount.formatAmount()}",
+                        icon = Icons.Default.Payments,
+                        iconColor = if (netCollectionAmount >= 0) EmeraldSuccess else CrimsonDanger,
                         modifier = Modifier.weight(1f)
                     )
                 }
