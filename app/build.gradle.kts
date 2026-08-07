@@ -25,25 +25,18 @@ android {
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      val ksFile = file(keystorePath)
-      val storePasswordEnv = System.getenv("STORE_PASSWORD")
-      val keyAliasEnv = System.getenv("KEY_ALIAS")
-      val keyPasswordEnv = System.getenv("KEY_PASSWORD")
+      val envKeystorePath = System.getenv("KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+      val keystorePath = envKeystorePath ?: "${rootDir}/internet-billing-release.jks"
+      val ksFile = if (keystorePath.isNotBlank()) file(keystorePath) else null
+      val storePasswordEnv = System.getenv("STORE_PASSWORD")?.takeIf { it.isNotBlank() }
+      val keyAliasEnv = System.getenv("KEY_ALIAS")?.takeIf { it.isNotBlank() }
+      val keyPasswordEnv = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() }
 
-      if (ksFile.exists() && !storePasswordEnv.isNullOrEmpty()) {
+      if (ksFile != null && ksFile.exists() && !storePasswordEnv.isNullOrEmpty()) {
         storeFile = ksFile
         storePassword = storePasswordEnv
         keyAlias = if (!keyAliasEnv.isNullOrEmpty()) keyAliasEnv else "upload"
         keyPassword = if (!keyPasswordEnv.isNullOrEmpty()) keyPasswordEnv else storePasswordEnv
-      } else {
-        val debugKs = file("${rootDir}/debug.keystore")
-        if (debugKs.exists()) {
-          storeFile = debugKs
-          storePassword = "android"
-          keyAlias = "androiddebugkey"
-          keyPassword = "android"
-        }
       }
     }
   }
@@ -57,18 +50,16 @@ android {
       if (releaseConfig.storeFile != null && releaseConfig.storeFile!!.exists()) {
         signingConfig = releaseConfig
       } else {
-        signingConfig = signingConfigs.getByName("debug")
+        val debugKs = file("${rootDir}/debug.keystore")
+        if (debugKs.exists()) {
+          signingConfig = signingConfigs.getByName("debug")
+        }
       }
     }
     debug {
       val debugKs = file("${rootDir}/debug.keystore")
       if (debugKs.exists()) {
-        signingConfig = signingConfigs.create("debugConfig") {
-          storeFile = debugKs
-          storePassword = "android"
-          keyAlias = "androiddebugkey"
-          keyPassword = "android"
-        }
+        signingConfig = signingConfigs.getByName("debug")
       }
     }
   }

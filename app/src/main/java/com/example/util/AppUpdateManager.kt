@@ -109,7 +109,10 @@ object AppUpdateManager {
                 }
                 // Fallback to first asset if no explicit .apk extension match
                 if (apkUrl == null && assets.length() > 0) {
-                    apkUrl = assets.getJSONObject(0).optString("browser_download_url", null)
+                    val firstAsset = assets.getJSONObject(0)
+                    if (firstAsset.has("browser_download_url")) {
+                        apkUrl = firstAsset.getString("browser_download_url")
+                    }
                 }
             }
 

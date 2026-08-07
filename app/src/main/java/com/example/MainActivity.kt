@@ -46,6 +46,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.BillEntity
 import com.example.data.model.CustomerEntity
 import com.example.data.model.IspPackageEntity
+import com.example.ui.components.AppUpdateDialog
+import com.example.util.AppUpdateManager
 import com.example.ui.components.BillGenerateDialog
 import com.example.ui.components.CustomerDialog
 import com.example.ui.components.PackageDialog
@@ -138,6 +140,20 @@ fun MainAppContent(viewModel: IspViewModel) {
     var packageToEdit by remember { mutableStateOf<IspPackageEntity?>(null) }
 
     var showGenerateBillsDialog by remember { mutableStateOf(false) }
+    var showAutoUpdatePrompt by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val result = AppUpdateManager.checkForUpdates(context)
+            result.onSuccess { info ->
+                if (info.isNewer) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        showAutoUpdatePrompt = true
+                    }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(toastMessage) {
         toastMessage?.let {
@@ -357,6 +373,12 @@ fun MainAppContent(viewModel: IspViewModel) {
                 viewModel.generateMonthlyBills(month, dueDate)
                 showGenerateBillsDialog = false
             }
+        )
+    }
+
+    if (showAutoUpdatePrompt) {
+        AppUpdateDialog(
+            onDismissRequest = { showAutoUpdatePrompt = false }
         )
     }
 }

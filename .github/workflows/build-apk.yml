@@ -1,4 +1,4 @@
-name: Android Release
+name: Build Production APK
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
       release_title:
         description: 'Release Title'
         required: false
-        default: 'New Release'
+        default: 'Production Release'
 
 jobs:
   build:
@@ -38,8 +38,6 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-disabled: true
 
       - name: Grant Execute Permission for Gradle Wrapper
         run: |
@@ -63,47 +61,41 @@ jobs:
             gradle :app:assembleRelease --stacktrace
           fi
 
-      - name: Locate and Rename Output APK
+      - name: Locate and Prepare Output APK
         run: |
           mkdir -p app/build/outputs/apk/release
           mkdir -p release
 
           echo "Searching for generated release APK..."
-          FOUND_APK=$(find . -type f -path "*/build/outputs/apk/*release/*.apk" ! -name "InternetBillManagement.apk" | head -n 1)
+          FOUND_APK=$(find . -type f -path "*/build/outputs/apk/*release/*.apk" ! -name "ISP-Billing-Release.apk" | head -n 1)
 
           if [ -z "$FOUND_APK" ]; then
             echo "Searching all APK files for release variant..."
-            FOUND_APK=$(find . -type f -name "*.apk" ! -name "InternetBillManagement.apk" | grep -i "release" | head -n 1)
+            FOUND_APK=$(find . -type f -name "*.apk" ! -name "ISP-Billing-Release.apk" | grep -i "release" | head -n 1)
           fi
 
           if [ -z "$FOUND_APK" ]; then
             echo "ERROR: Release APK could not be found!"
-            echo "Searched paths:"
-            echo " - **/build/outputs/apk/*release/*.apk"
-            echo " - **/build/outputs/apk/**/*.apk"
             exit 1
           fi
 
           echo "Discovered APK path: $FOUND_APK"
-
-          cp "$FOUND_APK" "app/build/outputs/apk/release/InternetBillManagement.apk"
-          cp "$FOUND_APK" "release/InternetBillManagement.apk"
-
-          echo "Final renamed APK path: app/build/outputs/apk/release/InternetBillManagement.apk"
-          echo "Final renamed APK path: release/InternetBillManagement.apk"
+          cp "$FOUND_APK" "release/ISP-Billing-Release.apk"
+          cp "$FOUND_APK" "app/build/outputs/apk/release/ISP-Billing-Release.apk"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
-          path: app/build/outputs/apk/release/InternetBillManagement.apk
+          name: ISP-Billing-APK
+          path: release/ISP-Billing-Release.apk
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/InternetBillManagement.apk
+          files: release/ISP-Billing-Release.apk
           name: ${{ github.event.inputs.release_title || github.ref_name }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v1.0.{0}', github.run_number) }}
           draft: false
           prerelease: false
         env:

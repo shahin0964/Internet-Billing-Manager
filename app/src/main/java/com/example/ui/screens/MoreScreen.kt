@@ -84,6 +84,7 @@ fun MoreScreen(
     var networkStatus by remember(settings) { mutableStateOf(settings.networkStatus) }
     var themeMode by remember(settings) { mutableStateOf(settings.themeMode) }
     var logoUri by remember(settings) { mutableStateOf(settings.logoUri) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
 
     val imagePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
@@ -751,10 +752,36 @@ tonalElevation = 2.dp,
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(androidx.compose.ui.res.stringResource(com.example.R.string.export_json_backup))
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = { showUpdateDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(androidx.compose.ui.res.stringResource(com.example.R.string.check_for_update))
+                    }
                 }
             }
         }
 
         item { Spacer(modifier = Modifier.height(30.dp)) }
+    }
+
+    if (showUpdateDialog) {
+        AppUpdateDialog(
+            onDismissRequest = { showUpdateDialog = false }
+        )
     }
 }
