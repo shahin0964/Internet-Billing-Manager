@@ -1,6 +1,8 @@
 package com.example.data.repository
 
 import android.content.Context
+import android.util.Log
+import java.io.File
 import com.example.data.dao.BillDao
 import com.example.data.dao.BusinessSettingsDao
 import com.example.data.dao.CustomerDao
@@ -315,6 +317,46 @@ class IspRepository(
         } catch (e: Exception) {
             e.printStackTrace()
             false
+        }
+    }
+
+    /**
+     * Automatically creates a persistent pre-update backup of all business data
+     * (customers, bills, payments, settings, packages, expenses) before an app update is applied.
+     */
+    suspend fun createAutomaticPreUpdateBackup(context: Context): Result<File> {
+        return try {
+            val jsonStr = generateFullBackupJson(context)
+            val pInfo = try {
+                context.packageManager.getPackageInfo(context.packageName, 0)
+            } catch (e: Exception) { null }
+            val verName = pInfo?.versionName ?: "1.0.8"
+            val timestamp = System.currentTimeMillis()
+
+            val backupDir = File(context.filesDir, "backups")
+            if (!backupDir.exists()) {
+                backupDir.mkdirs()
+            }
+
+            val versionedFile = File(backupDir, "pre_update_backup_v${verName}_${timestamp}.json")
+            versionedFile.writeText(jsonStr, Charsets.UTF_8)
+
+            val latestFile = File(backupDir, "latest_pre_update_backup.json")
+            latestFile.writeText(jsonStr, Charsets.UTF_8)
+
+            val extDir = context.getExternalFilesDir(null)
+            if (extDir != null) {
+                val extBackupDir = File(extDir, "backups")
+                if (!extBackupDir.exists()) extBackupDir.mkdirs()
+                val extFile = File(extBackupDir, "pre_update_backup_v${verName}_${timestamp}.json")
+                extFile.writeText(jsonStr, Charsets.UTF_8)
+            }
+
+            Log.i("IspRepository", "Automatic pre-update backup created: ${versionedFile.absolutePath} (${versionedFile.length()} bytes)")
+            Result.success(versionedFile)
+        } catch (e: Exception) {
+            Log.e("IspRepository", "Error creating automatic pre-update safety backup", e)
+            Result.failure(e)
         }
     }
 

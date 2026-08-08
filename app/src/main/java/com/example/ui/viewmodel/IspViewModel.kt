@@ -2,6 +2,7 @@ package com.example.ui.viewmodel
 
 import com.example.ui.components.formatAmount
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.database.IspDatabase
@@ -28,7 +29,7 @@ import java.util.Locale
 
 class IspViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository: IspRepository
+    val repository: IspRepository
 
     val customers: StateFlow<List<CustomerEntity>>
     val packages: StateFlow<List<IspPackageEntity>>
@@ -191,6 +192,10 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearToast() {
         _toastMessage.value = null
+    }
+
+    suspend fun createPreUpdateBackup(context: Context): Result<java.io.File> {
+        return repository.createAutomaticPreUpdateBackup(context)
     }
 
     fun showToast(msg: String) {

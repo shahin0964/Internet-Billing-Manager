@@ -96,13 +96,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val settings by viewModel.settings.collectAsStateWithLifecycle()
-            val useDarkTheme = when (settings.themeMode) {
-                "DARK" -> true
-                "LIGHT" -> false
-                else -> isSystemInDarkTheme()
-            }
 
-            IspControlTheme(darkTheme = useDarkTheme) {
+            IspControlTheme(themeMode = settings.themeMode) {
                 MainAppContent(viewModel = viewModel)
             }
         }
@@ -148,6 +143,7 @@ fun MainAppContent(viewModel: IspViewModel) {
     var showGenerateBillsDialog by remember { mutableStateOf(false) }
     var showAutoUpdatePrompt by remember { mutableStateOf(false) }
     var showBackupAndRestoreScreen by remember { mutableStateOf(false) }
+    var showAboutScreen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -323,6 +319,9 @@ fun MainAppContent(viewModel: IspViewModel) {
                         },
                         onOpenBackupAndRestore = {
                             showBackupAndRestoreScreen = true
+                        },
+                        onOpenAbout = {
+                            showAboutScreen = true
                         }
                     )
                 }
@@ -360,6 +359,19 @@ fun MainAppContent(viewModel: IspViewModel) {
             com.example.ui.screens.BackupAndRestoreScreen(
                 viewModel = viewModel,
                 onBackClick = { showBackupAndRestoreScreen = false }
+            )
+        }
+    }
+
+    if (showAboutScreen) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showAboutScreen = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            com.example.ui.screens.AboutScreen(
+                onBackClick = { showAboutScreen = false }
             )
         }
     }

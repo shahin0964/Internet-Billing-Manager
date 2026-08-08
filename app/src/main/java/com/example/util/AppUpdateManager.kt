@@ -80,9 +80,9 @@ object AppUpdateManager {
     fun getInstalledVersion(context: Context): String {
         return try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.0.0"
+            pInfo.versionName ?: "1.0.8"
         } catch (e: Exception) {
-            "1.0.0"
+            "1.0.8"
         }
     }
 
@@ -351,6 +351,29 @@ object AppUpdateManager {
             Result.success(outputFile)
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading APK: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Create automatic pre-update safety backup of all customer, bill, payment, and settings records.
+     */
+    suspend fun createPreUpdateSafetyBackup(context: Context): Result<File> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Creating pre-update safety backup...")
+            val db = com.example.data.database.IspDatabase.getDatabase(context)
+            val repository = com.example.data.repository.IspRepository(
+                db.customerDao(),
+                db.packageDao(),
+                db.billDao(),
+                db.paymentDao(),
+                db.settingsDao(),
+                db.expenseDao(),
+                db
+            )
+            repository.createAutomaticPreUpdateBackup(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create pre-update safety backup: ${e.message}", e)
             Result.failure(e)
         }
     }

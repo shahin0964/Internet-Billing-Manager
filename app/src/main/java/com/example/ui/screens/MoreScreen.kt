@@ -27,17 +27,29 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.shape.CircleShape
 import com.example.ui.components.AppUpdateDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -74,7 +86,8 @@ fun MoreScreen(
     onExportBackup: ((String) -> Unit) -> Unit,
     onShowToast: (String) -> Unit,
     onOpenExpenseManagement: () -> Unit = {},
-    onOpenBackupAndRestore: () -> Unit = {}
+    onOpenBackupAndRestore: () -> Unit = {},
+    onOpenAbout: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -617,50 +630,84 @@ tonalElevation = 2.dp,
             }
         }
         
-        // Theme Preference
+        // Collapsible Theme Preference Card
         item {
+            var showThemeBottomSheet by remember { mutableStateOf(false) }
+            val currentThemeItem = com.example.ui.theme.getThemeItem(themeMode)
+
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showThemeBottomSheet = true },
                 shape = RoundedCornerShape(18.dp),
-shadowElevation = 3.dp,
-tonalElevation = 2.dp,
+                shadowElevation = 6.dp,
+                tonalElevation = 3.dp,
                 color = MaterialTheme.colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
                     MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
                 )
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SectionHeader(title = androidx.compose.ui.res.stringResource(com.example.R.string.app_theme_appearance))
-                    Spacer(modifier = Modifier.height(10.dp))
-
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        listOf("SYSTEM", "DARK", "LIGHT").forEach { mode ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.clickable {
-                                    themeMode = mode
-                                    onUpdateSettings(settings.copy(themeMode = mode))
-                                }
-                            ) {
-                                RadioButton(
-                                    selected = (themeMode == mode),
-                                    onClick = {
-                                        themeMode = mode
-                                        onUpdateSettings(settings.copy(themeMode = mode))
-                                    }
-                                )
-                                Text(
-                                    text = mode.lowercase().capitalize(),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Palette,
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(com.example.R.string.theme_title),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = currentThemeItem.getLocalizedName(context),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Open theme selector",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
+            }
+
+            if (showThemeBottomSheet) {
+                ThemeSelectionBottomSheet(
+                    currentThemeKey = themeMode,
+                    onThemeSelected = { newThemeKey ->
+                        themeMode = newThemeKey
+                        onUpdateSettings(settings.copy(themeMode = newThemeKey))
+                        showThemeBottomSheet = false
+                    },
+                    onDismissRequest = { showThemeBottomSheet = false }
+                )
             }
         }
 
@@ -709,7 +756,7 @@ tonalElevation = 2.dp,
             }
         }
 
-        // App Update Option (Bottom)
+        // App Update Option
         item {
             Surface(
                 modifier = Modifier
@@ -753,6 +800,51 @@ tonalElevation = 2.dp,
             }
         }
 
+        // About Option (VERY BOTTOM - LAST OPTION)
+        item {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenAbout() },
+                shape = RoundedCornerShape(18.dp),
+                shadowElevation = 6.dp,
+                tonalElevation = 3.dp,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SectionHeader(
+                        title = androidx.compose.ui.res.stringResource(com.example.R.string.about),
+                        subtitle = androidx.compose.ui.res.stringResource(com.example.R.string.about_subtitle)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = "Tap to open",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
         item { Spacer(modifier = Modifier.height(30.dp)) }
     }
 
@@ -760,5 +852,191 @@ tonalElevation = 2.dp,
         AppUpdateDialog(
             onDismissRequest = { showUpdateDialog = false }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ThemeSelectionBottomSheet(
+    currentThemeKey: String,
+    onThemeSelected: (String) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(com.example.R.string.select_theme),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(com.example.R.string.app_theme_appearance),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onDismissRequest) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(com.example.ui.theme.ALL_THEME_ITEMS) { themeItem ->
+                    val isSelected = currentThemeKey.equals(themeItem.key, ignoreCase = true) ||
+                            (currentThemeKey.isBlank() && themeItem.key == "SYSTEM")
+
+                    ThemeItemCard(
+                        themeItem = themeItem,
+                        isSelected = isSelected,
+                        onClick = { onThemeSelected(themeItem.key) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ThemeItemCard(
+    themeItem: com.example.ui.theme.AppThemeItem,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        },
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                // Color Preview Swatch
+                Surface(
+                    modifier = Modifier.size(width = 48.dp, height = 34.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = themeItem.previewBackground,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.2f))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Surface(
+                            modifier = Modifier
+                                .padding(3.dp)
+                                .size(width = 22.dp, height = 26.dp),
+                            shape = RoundedCornerShape(4.dp),
+                            color = themeItem.previewSurface
+                        ) {}
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(5.dp)
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(themeItem.previewPrimary)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column {
+                    Text(
+                        text = themeItem.getLocalizedName(context),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                        ),
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = themeItem.getDescription(context),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Selected",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            } else {
+                RadioButton(
+                    selected = false,
+                    onClick = onClick
+                )
+            }
+        }
     }
 }

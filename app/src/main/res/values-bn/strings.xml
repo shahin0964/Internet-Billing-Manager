@@ -102,9 +102,29 @@
     <string name="add_package_btn">+ প্যাকেজ যোগ করুন</string>
     <string name="no_packages_created">এখনও কোন প্যাকেজ তৈরি করা হয়নি।</string>
     <string name="app_theme_appearance">অ্যাপ থিমের চেহারা</string>
+    <string name="theme_title">থিম</string>
+    <string name="select_theme">থিম নির্বাচন করুন</string>
     <string name="theme_system">সিস্টেম</string>
+    <string name="theme_system_default">সিস্টেম ডিফোল্ট</string>
+    <string name="theme_system_default_desc">স্বয়ংক্রিয়ভাবে ডিভাইসের আলো/আঁধার অনুসরণ করে</string>
     <string name="theme_light">হালকা</string>
+    <string name="theme_light_desc">পরিচ্ছন্ন ও পেশাদার হালকা চেহারা</string>
     <string name="theme_dark">গাঢ়</string>
+    <string name="theme_dark_desc">পরিশোধিত আধুনিক গাঢ় চেহারা</string>
+    <string name="theme_ocean_blue">ওশান ব্লু</string>
+    <string name="theme_ocean_blue_desc">পেশাদার নীল ও টিল কালার কম্বিনেশন</string>
+    <string name="theme_emerald">এমেরাল্ড গ্রিন</string>
+    <string name="theme_emerald_desc">অভিজাত সবুজ রঙের পেশাদার থিম</string>
+    <string name="theme_royal_purple">রয়েল পার্পল</string>
+    <string name="theme_royal_purple_desc">প্রিমিয়াম বেগুনি রঙের স্টাইলিশ থিম</string>
+    <string name="theme_sunset">সানসেট অরেঞ্জ</string>
+    <string name="theme_sunset_desc">উষ্ণ কমলা রঙের আকর্ষণীয় লুক</string>
+    <string name="theme_midnight">মিডনাইট</string>
+    <string name="theme_midnight_desc">গভীর গাঢ় ব্যাকগ্রাউন্ড ও সূক্ষ্ম নীল স্পর্শ</string>
+    <string name="theme_slate">স্লেট গ্রে</string>
+    <string name="theme_slate_desc">মার্জিত ধুসর ও স্লেট রঙের থিম</string>
+    <string name="theme_aqua">অ্যাকোয়া সায়ান</string>
+    <string name="theme_aqua_desc">তাজা ও প্রাণবন্ত সায়ান থিম</string>
     <string name="data_utilities_backup">ডেটা ইউটিলিটি ও ব্যাকআপ</string>
     <string name="export_json_backup">জেসন ডেটা ব্যাকআপ এক্সপোর্ট করুন</string>
     <string name="add_internet_package">ইন্টারনেট প্যাকেজ যোগ করুন</string>
@@ -192,6 +212,10 @@
     <string name="downloading_update">আপডেট ডাউনলোড হচ্ছে...</string>
     <string name="download_complete">ডাউনলোড সম্পন্ন হয়েছে। ইনস্টল করতে ট্যাপ করুন।</string>
     <string name="install">ইনস্টল</string>
+    <string name="whats_new">নতুন কী আছে</string>
+    <string name="view_details">বিস্তারিত দেখুন</string>
+    <string name="release_notes_title">সম্পূর্ণ রিলিজ নোট</string>
+    <string name="close">বন্ধ করুন</string>
 
     <!-- Expense Management Strings -->
     <string name="expense_management">খরচ ব্যবস্থাপনা</string>
@@ -279,6 +303,73 @@
     <string name="latest_created_backup">সর্বশেষ তৈরি ব্যাকআপ</string>
     <string name="delete_backup_title">ব্যাকআপ ফাইল মুছুন</string>
     <string name="delete_backup_confirm">আপনি কি এই ব্যাকআপ ফাইলটি মুছে ফেলতে চান?</string>
+
+    <!-- About Screen Strings -->
+    <string name="about">সম্পর্কে (About)</string>
+    <string name="about_subtitle">অ্যাপের তথ্য, বৈশিষ্ট্য, গোপনীয়তা ও সহায়তা</string>
+    <string name="about_section_app_info">অ্যাপের তথ্য</string>
+    <string name="about_section_features">বৈশিষ্ট্যসমূহ</string>
+    <string name="about_section_privacy">তথ্য ও গোপনীয়তা</string>
+    <string name="about_section_support">সহায়তা</string>
+    <string name="about_section_licenses">ওপেন সোর্স লাইসেন্স</string>
+    <string name="about_app_name">আইএসপি বিলিং ম্যানেজার</string>
+    <string name="about_version">ভার্সন</string>
+    <string name="about_build">বিল্ড</string>
+    <string name="about_app_id">অ্যাপ্লিকেশন আইডি</string>
+    <string name="about_platform">প্ল্যাটফর্ম</string>
+    <string name="about_min_android">সর্বনিম্ন অ্যান্ড্রয়েড</string>
+    <string name="about_update_status">আপডেট স্ট্যাটাস</string>
+    <string name="update_status_up_to_date">সর্বশেষ ভার্সন</string>
+    <string name="update_status_available">নতুন আপডেট পাওয়া গেছে (%1$s)</string>
+    <string name="update_status_unavailable">আপডেট চেক সম্ভব হয়নি</string>
+    <string name="about_purpose_label">উদ্দেশ্য</string>
+    <string name="about_purpose_desc">ইন্টারনেট সার্ভিস প্রোভাইডারদের জন্য পেশাদার বিলিং ও গ্রাহক ব্যবস্থাপনা সমাধান।</string>
+
+    <string name="about_feat_customer_mgmt">গ্রাহক ব্যবস্থাপনা</string>
+    <string name="about_feat_customer_desc">গ্রাহক যোগ, সম্পাদনা, মুছে ফেলা, সক্রিয়/নিষ্ক্রিয় গ্রাহক নিয়ন্ত্রণ এবং বিস্তারিত সন্ধান</string>
+
+    <string name="about_feat_billing_mgmt">বিলিং ব্যবস্থাপনা</string>
+    <string name="about_feat_billing_desc">মাসিক বিল জেনারেশন, পেমেন্ট রেকর্ড, পরিশোধিত/বকেয়া স্ট্যাটাস ট্র্যাকিং এবং বিলিং ইতিহাস</string>
+
+    <string name="about_feat_collection_mgmt">কালেকশন ব্যবস্থাপনা</string>
+    <string name="about_feat_collection_desc">মাসিক আদায় পর্যবেক্ষণ, জমার বিবরণী, বকেয়া অনুধাবন ও কালেকশন তথ্য</string>
+
+    <string name="about_feat_expense_mgmt">খরচ ব্যবস্থাপনা</string>
+    <string name="about_feat_expense_desc">ব্যবসায়িক খরচ ব্যবস্থাপনা, ব্যান্ডউইথ খরচ, স্টাফ বেতন, বিদ্যুৎ বিল, ইকুইপমেন্ট ও অন্যান্য খরচ</string>
+
+    <string name="about_feat_dashboard">ড্যাশবোর্ড ও অ্যানালিটিক্স</string>
+    <string name="about_feat_dashboard_desc">গ্রাহক পরিসংখ্যান, বিলিং পরিসংখ্যান, কালেকশন তথ্য, বকেয়া তথ্য এবং ব্যবসায়িক সম্যক ধারণা</string>
+
+    <string name="about_feat_backup">ব্যাকআপ ও রিস্টোর</string>
+    <string name="about_feat_backup_desc">অফলাইন ব্যাকআপ, পাসওয়ার্ড এনক্রিপ্টেড ব্যাকআপ, রিস্টোর এবং লোকাল ফাইল ব্যবস্থাপনা</string>
+
+    <string name="about_feat_language">ভাষা</string>
+    <string name="about_feat_language_desc">বাংলা / English</string>
+
+    <string name="about_privacy_storage_title">তথ্য সংরক্ষণ</string>
+    <string name="about_privacy_storage_desc">সমস্ত গ্রাহক, বিলিং, পেমেন্ট, খরচ এবং ব্যবসায়িক তথ্য সুরক্ষিতভাবে আপনার ডিভাইসে লোকাল ডাটাবেসে সংরক্ষিত থাকে।</string>
+
+    <string name="about_privacy_collection_title">তথ্য সংগ্রহ</string>
+    <string name="about_privacy_collection_desc">অ্যাপটি স্থানীয়ভাবে কাজ করে এবং কেবল আপনার ইনপুট করা ব্যবসায়িক তথ্য ব্যবহার করে।</string>
+
+    <string name="about_privacy_sharing_title">তথ্য শেয়ারিং</string>
+    <string name="about_privacy_sharing_desc">আপনার ব্যবসায়িক তথ্য স্থানীয়ভাবে সংরক্ষিত থাকে এবং কোনো তৃতীয় পক্ষের সাথে শেয়ার করা হয় না।</string>
+
+    <string name="about_privacy_backup_title">ব্যাকআপ গোপনীয়তা</string>
+    <string name="about_privacy_backup_desc">এক্সপোর্ট করা ব্যাকআপ ফাইলে গ্রাহক ও আর্থিক তথ্য থাকে, তাই ব্যাকআপ ফাইল নিরাপদ স্থানে রাখুন।</string>
+
+    <string name="about_privacy_security_title">নিরাপত্তা</string>
+    <string name="about_privacy_security_desc">স্থানীয় ডাটাবেস সংরক্ষণ এবং এনক্রিপ্টেড ব্যাকআপ সুবিধা।</string>
+
+    <string name="about_privacy_resp_title">ব্যবহারকারীর দায়িত্ব</string>
+    <string name="about_privacy_resp_desc">ডিভাইস, অ্যাকাউন্ট ক্রেডেনশিয়াল এবং ব্যাকআপ ফাইলের নিরাপত্তা রক্ষা করা ব্যবহারকারীর দায়িত্ব।</string>
+
+    <string name="about_support_phone">ফোন</string>
+    <string name="about_support_email">সাপোর্ট ইমেইল</string>
+    <string name="contact_support">সাপোর্টে যোগাযোগ</string>
+    <string name="report_problem">সমস্যা জানান</string>
+
+    <string name="about_footer_copyright">© 2026 আইএসপি বিলিং ম্যানেজার। সর্বস্বত্ব সংরক্ষিত।</string>
 </resources>
 
 

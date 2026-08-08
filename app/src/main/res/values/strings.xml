@@ -102,9 +102,29 @@
     <string name="add_package_btn">+ Add Package</string>
     <string name="no_packages_created">No packages created yet.</string>
     <string name="app_theme_appearance">App Theme Appearance</string>
+    <string name="theme_title">Theme</string>
+    <string name="select_theme">Select Theme</string>
     <string name="theme_system">System</string>
+    <string name="theme_system_default">System Default</string>
+    <string name="theme_system_default_desc">Follows device appearance automatically</string>
     <string name="theme_light">Light</string>
+    <string name="theme_light_desc">Clean, bright, professional appearance</string>
     <string name="theme_dark">Dark</string>
+    <string name="theme_dark_desc">Modern dark interface with comfortable contrast</string>
+    <string name="theme_ocean_blue">Ocean Blue</string>
+    <string name="theme_ocean_blue_desc">Professional blue/teal ISP management style</string>
+    <string name="theme_emerald">Emerald</string>
+    <string name="theme_emerald_desc">Elegant green-based professional theme</string>
+    <string name="theme_royal_purple">Royal Purple</string>
+    <string name="theme_royal_purple_desc">Premium purple-based theme</string>
+    <string name="theme_sunset">Sunset</string>
+    <string name="theme_sunset_desc">Warm orange/red accent style</string>
+    <string name="theme_midnight">Midnight</string>
+    <string name="theme_midnight_desc">Deep dark premium appearance with subtle blue accents</string>
+    <string name="theme_slate">Slate</string>
+    <string name="theme_slate_desc">Minimal gray/slate professional appearance</string>
+    <string name="theme_aqua">Aqua</string>
+    <string name="theme_aqua_desc">Fresh cyan/blue appearance</string>
     <string name="data_utilities_backup">Data Utilities &amp; Backup</string>
     <string name="export_json_backup">Export JSON Data Backup</string>
     <string name="add_internet_package">Add Internet Package</string>
@@ -196,6 +216,10 @@
     <string name="downloading_update">Downloading update...</string>
     <string name="download_complete">Download complete. Tap Install to update.</string>
     <string name="install">Install</string>
+    <string name="whats_new">What’s New</string>
+    <string name="view_details">View details</string>
+    <string name="release_notes_title">Full Release Notes</string>
+    <string name="close">Close</string>
 
     <!-- Expense Management Strings -->
     <string name="expense_management">Expense Management</string>
@@ -283,6 +307,73 @@
     <string name="latest_created_backup">Latest Created Backup</string>
     <string name="delete_backup_title">Delete Local Backup</string>
     <string name="delete_backup_confirm">Are you sure you want to delete this backup file?</string>
+
+    <!-- About Screen Strings -->
+    <string name="about">About</string>
+    <string name="about_subtitle">App information, features, privacy &amp; support</string>
+    <string name="about_section_app_info">App Information</string>
+    <string name="about_section_features">Features</string>
+    <string name="about_section_privacy">Data &amp; Privacy</string>
+    <string name="about_section_support">Support</string>
+    <string name="about_section_licenses">Open Source Licenses</string>
+    <string name="about_app_name">ISP Billing Manager</string>
+    <string name="about_version">Version</string>
+    <string name="about_build">Build</string>
+    <string name="about_app_id">Application ID</string>
+    <string name="about_platform">Platform</string>
+    <string name="about_min_android">Minimum Android</string>
+    <string name="about_update_status">Update Status</string>
+    <string name="update_status_up_to_date">Up to date</string>
+    <string name="update_status_available">Update available (v%1$s)</string>
+    <string name="update_status_unavailable">Update check unavailable</string>
+    <string name="about_purpose_label">Purpose</string>
+    <string name="about_purpose_desc">Professional billing and customer management solution for Internet Service Providers.</string>
+
+    <string name="about_feat_customer_mgmt">Customer Management</string>
+    <string name="about_feat_customer_desc">Add customers, Edit customers, Delete customers, Active/Inactive customer management, Customer search and management</string>
+
+    <string name="about_feat_billing_mgmt">Billing Management</string>
+    <string name="about_feat_billing_desc">Monthly billing, Bill generation, Payment recording, Paid / Partial / Unpaid status, Due bill management, Billing history</string>
+
+    <string name="about_feat_collection_mgmt">Collection Management</string>
+    <string name="about_feat_collection_desc">Monthly collection tracking, Collection summary, Remaining due tracking, Monthly billing/collection information</string>
+
+    <string name="about_feat_expense_mgmt">Expense Management</string>
+    <string name="about_feat_expense_desc">Business expense management, Bandwidth expenses, Staff salary expenses, Electricity expenses, Equipment expenses, Other business expenses</string>
+
+    <string name="about_feat_dashboard">Dashboard &amp; Analytics</string>
+    <string name="about_feat_dashboard_desc">Customer statistics, Billing statistics, Collection statistics, Due amount information, Business overview</string>
+
+    <string name="about_feat_backup">Backup &amp; Restore</string>
+    <string name="about_feat_backup_desc">Offline backup, Encrypted backup, Restore backup, Export backup file, Local backup management</string>
+
+    <string name="about_feat_language">Language</string>
+    <string name="about_feat_language_desc">বাংলা / English</string>
+
+    <string name="about_privacy_storage_title">Data Storage</string>
+    <string name="about_privacy_storage_desc">Customer, billing, payment, expense and business records are stored locally on the device using a local SQLite database.</string>
+
+    <string name="about_privacy_collection_title">Data Collection</string>
+    <string name="about_privacy_collection_desc">The application operates locally and collects only user-entered business data required for app functionality.</string>
+
+    <string name="about_privacy_sharing_title">Data Sharing</string>
+    <string name="about_privacy_sharing_desc">Application data is stored locally and is not shared with third parties.</string>
+
+    <string name="about_privacy_backup_title">Backup Privacy</string>
+    <string name="about_privacy_backup_desc">Exported backup files contain customer, billing, payment and business records and should be stored securely.</string>
+
+    <string name="about_privacy_security_title">Security</string>
+    <string name="about_privacy_security_desc">Local storage with optional password-encrypted backup protection.</string>
+
+    <string name="about_privacy_resp_title">User Responsibility</string>
+    <string name="about_privacy_resp_desc">Users should keep their device, account credentials and exported backup files secure.</string>
+
+    <string name="about_support_phone">Phone</string>
+    <string name="about_support_email">Support Email</string>
+    <string name="contact_support">Contact Support</string>
+    <string name="report_problem">Report a Problem</string>
+
+    <string name="about_footer_copyright">© 2026 ISP Billing Manager. All rights reserved.</string>
 </resources>
 
 

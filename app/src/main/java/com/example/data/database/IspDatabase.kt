@@ -89,7 +89,7 @@ abstract class IspDatabase : RoomDatabase() {
                     "isp_control_center.db"
                 )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                    .fallbackToDestructiveMigration()
+                    // Strict Data Preservation: Never use fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

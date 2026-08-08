@@ -52,6 +52,32 @@ jobs:
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
 
+      - name: Determine Versioning
+        id: versioning
+        run: |
+          RUN_NUM="${{ github.run_number }}"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG_NAME="${{ github.ref_name }}"
+            VER_NAME=$(echo "$TAG_NAME" | sed 's/^[vV]//')
+            
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VER_NAME"
+            MAJOR=${MAJOR:-1}
+            MINOR=${MINOR:-0}
+            PATCH=${PATCH:-0}
+            CALC_CODE=$((MAJOR * 100000 + MINOR * 1000 + PATCH * 10 + RUN_NUM))
+            
+            echo "VERSION_NAME=$VER_NAME" >> $GITHUB_ENV
+            echo "VERSION_CODE=$CALC_CODE" >> $GITHUB_ENV
+            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          else
+            VER_NAME="1.0.${RUN_NUM}"
+            CALC_CODE=$((10000 + RUN_NUM))
+            
+            echo "VERSION_NAME=$VER_NAME" >> $GITHUB_ENV
+            echo "VERSION_CODE=$CALC_CODE" >> $GITHUB_ENV
+            echo "tag_name=v$VER_NAME" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build Release APK
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
@@ -103,8 +129,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/InternetBillManagement.apk
-          name: ${{ github.event.inputs.release_title || github.ref_name }}
+          name: ${{ github.event.inputs.release_title || steps.versioning.outputs.tag_name || github.ref_name }}
+          tag_name: ${{ steps.versioning.outputs.tag_name || github.ref_name }}
           draft: false
           prerelease: false
+          make_latest: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

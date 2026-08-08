@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
@@ -69,8 +72,13 @@ fun AppUpdateDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var downloadProgress by remember { mutableFloatStateOf(0f) }
     var downloadedFile by remember { mutableStateOf<File?>(null) }
+    var showFullReleaseNotesDialog by remember { mutableStateOf(false) }
 
     val installedVersion = remember { AppUpdateManager.getInstalledVersion(context) }
+    val rawReleaseNotes = releaseInfo?.releaseNotes ?: ""
+    val summaryBullets = remember(rawReleaseNotes) {
+        parseSummaryItems(rawReleaseNotes)
+    }
 
     fun checkUpdates() {
         state = UpdateState.CHECKING
@@ -194,6 +202,66 @@ fun AppUpdateDialog(
                                 }
                             }
                         }
+
+                        if (summaryBullets.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.Start
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.whats_new),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                summaryBullets.forEach { bullet ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 2.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Text(
+                                            text = "• ",
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = bullet,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                if (rawReleaseNotes.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    TextButton(
+                                        onClick = { showFullReleaseNotesDialog = true },
+                                        modifier = Modifier.align(Alignment.End)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.view_details),
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        } else if (rawReleaseNotes.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(
+                                onClick = { showFullReleaseNotesDialog = true },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.view_details),
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
 
                     UpdateState.LATEST -> {
@@ -281,6 +349,9 @@ fun AppUpdateDialog(
                             } else {
                                 state = UpdateState.DOWNLOADING
                                 scope.launch {
+                                    // Automatic safety backup of all customer/billing data before APK update
+                                    AppUpdateManager.createPreUpdateSafetyBackup(context)
+
                                     val downloadResult = AppUpdateManager.downloadApk(
                                         context = context,
                                         downloadUrl = apkUrl,
@@ -338,4 +409,61 @@ fun AppUpdateDialog(
             }
         }
     )
+
+    if (showFullReleaseNotesDialog) {
+        AlertDialog(
+            onDismissRequest = { showFullReleaseNotesDialog = false },
+            shape = RoundedCornerShape(16.dp),
+            title = {
+                Text(
+                    text = stringResource(R.string.release_notes_title),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 320.dp)
+                        .verticalScroll(scrollState)
+                ) {
+                    Text(
+                        text = rawReleaseNotes,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFullReleaseNotesDialog = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        )
+    }
+}
+
+private fun parseSummaryItems(releaseNotes: String): List<String> {
+    if (releaseNotes.isBlank()) return emptyList()
+    return releaseNotes.lines()
+        .map { it.trim() }
+        .filter { line ->
+            line.isNotBlank() &&
+            !line.startsWith("#") &&
+            !line.contains("Full Changelog", ignoreCase = true) &&
+            !line.startsWith("http://", ignoreCase = true) &&
+            !line.startsWith("https://", ignoreCase = true)
+        }
+        .map { line ->
+            line.removePrefix("*")
+                .removePrefix("-")
+                .removePrefix("•")
+                .removePrefix("1.")
+                .removePrefix("2.")
+                .removePrefix("3.")
+                .trim()
+        }
+        .filter { it.isNotBlank() }
+        .take(3)
 }
