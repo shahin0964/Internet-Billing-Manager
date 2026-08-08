@@ -61,16 +61,21 @@ object AppUpdateManager {
      * Check if network connectivity is available.
      */
     fun isNetworkAvailable(context: Context): Boolean {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            ?: return true
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork ?: return false
-            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        } else {
-            @Suppress("DEPRECATION")
-            val activeNetworkInfo = connectivityManager.activeNetworkInfo
-            activeNetworkInfo != null && activeNetworkInfo.isConnected
+        return try {
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                ?: return true
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val network = connectivityManager.activeNetwork ?: return false
+                val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            } else {
+                @Suppress("DEPRECATION")
+                val activeNetworkInfo = connectivityManager.activeNetworkInfo
+                activeNetworkInfo != null && activeNetworkInfo.isConnected
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "Error checking network availability: ${e.message}")
+            true
         }
     }
 
@@ -417,7 +422,7 @@ object AppUpdateManager {
                 ?: return Result.failure(Exception("Downloaded file is not a valid Android package"))
 
             val currentPkg = context.packageName
-            val apkPkg = pInfo.packageName
+            val apkPkg = pInfo.packageName ?: pInfo.applicationInfo?.packageName
 
             if (!apkPkg.isNullOrBlank() && apkPkg != currentPkg) {
                 return Result.failure(
@@ -441,9 +446,9 @@ object AppUpdateManager {
                 "APK Verification: pkg=$apkPkg, apkVersionCode=$apkCode (installedCode=$installedCode), apkVersionName=$apkVersionName (installedVer=$installedVersion, expectedVer=$expectedVersionName)"
             )
 
-            if (apkCode <= installedCode) {
+            if (apkCode < installedCode) {
                 return Result.failure(
-                    Exception("Downloaded APK version code ($apkCode) is not newer than currently installed version code ($installedCode). Update aborted.")
+                    Exception("Downloaded APK version code ($apkCode) is older than currently installed version code ($installedCode). Update aborted.")
                 )
             }
 

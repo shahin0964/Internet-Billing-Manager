@@ -62,13 +62,22 @@ private enum class UpdateState {
 
 @Composable
 fun AppUpdateDialog(
+    initialReleaseInfo: GitHubReleaseInfo? = null,
     onDismissRequest: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var state by remember { mutableStateOf(UpdateState.CHECKING) }
-    var releaseInfo by remember { mutableStateOf<GitHubReleaseInfo?>(null) }
+    var state by remember {
+        mutableStateOf(
+            if (initialReleaseInfo != null) {
+                if (initialReleaseInfo.isNewer) UpdateState.NEW_AVAILABLE else UpdateState.LATEST
+            } else {
+                UpdateState.CHECKING
+            }
+        )
+    }
+    var releaseInfo by remember { mutableStateOf<GitHubReleaseInfo?>(initialReleaseInfo) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var downloadProgress by remember { mutableFloatStateOf(0f) }
     var downloadedFile by remember { mutableStateOf<File?>(null) }
@@ -84,30 +93,37 @@ fun AppUpdateDialog(
         state = UpdateState.CHECKING
         errorMessage = null
         scope.launch {
-            val result = AppUpdateManager.checkForUpdates(context)
-            result.onSuccess { info ->
-                releaseInfo = info
-                state = if (info.isNewer) UpdateState.NEW_AVAILABLE else UpdateState.LATEST
-            }.onFailure { err ->
-                errorMessage = when (err) {
-                    is UpdateException.NoInternet -> context.getString(R.string.update_error_no_internet)
-                    is UpdateException.ReleaseNotFound -> context.getString(R.string.update_error_no_release)
-                    is UpdateException.ApkAssetNotFound -> context.getString(R.string.update_error_no_apk)
-                    is UpdateException.HttpError -> context.getString(R.string.update_error_server, "HTTP ${err.httpCode}")
-                    is UpdateException.ServerError -> context.getString(R.string.update_error_server, "HTTP ${err.httpCode}")
-                    is UpdateException.RateLimited -> context.getString(R.string.update_error_server, "Rate Limit Exceeded")
-                    is UpdateException.Timeout, is UpdateException.ConnectionFailed -> context.getString(R.string.update_error_server, "Connection Timeout")
-                    is UpdateException.SslError -> context.getString(R.string.update_error_server, "SSL Error")
-                    is UpdateException.InvalidJson -> context.getString(R.string.update_error_server, "Invalid Response")
-                    else -> err.localizedMessage ?: context.getString(R.string.unable_to_check_updates)
+            try {
+                val result = AppUpdateManager.checkForUpdates(context)
+                result.onSuccess { info ->
+                    releaseInfo = info
+                    state = if (info.isNewer) UpdateState.NEW_AVAILABLE else UpdateState.LATEST
+                }.onFailure { err ->
+                    errorMessage = when (err) {
+                        is UpdateException.NoInternet -> context.getString(R.string.update_error_no_internet)
+                        is UpdateException.ReleaseNotFound -> context.getString(R.string.update_error_no_release)
+                        is UpdateException.ApkAssetNotFound -> context.getString(R.string.update_error_no_apk)
+                        is UpdateException.HttpError -> context.getString(R.string.update_error_server, "HTTP ${err.httpCode}")
+                        is UpdateException.ServerError -> context.getString(R.string.update_error_server, "HTTP ${err.httpCode}")
+                        is UpdateException.RateLimited -> context.getString(R.string.update_error_server, "Rate Limit Exceeded")
+                        is UpdateException.Timeout, is UpdateException.ConnectionFailed -> context.getString(R.string.update_error_server, "Connection Timeout")
+                        is UpdateException.SslError -> context.getString(R.string.update_error_server, "SSL Error")
+                        is UpdateException.InvalidJson -> context.getString(R.string.update_error_server, "Invalid Response")
+                        else -> err.localizedMessage ?: context.getString(R.string.unable_to_check_updates)
+                    }
+                    state = UpdateState.ERROR
                 }
+            } catch (e: Throwable) {
+                errorMessage = e.localizedMessage ?: context.getString(R.string.unable_to_check_updates)
                 state = UpdateState.ERROR
             }
         }
     }
 
-    LaunchedEffect(Unit) {
-        checkUpdates()
+    LaunchedEffect(initialReleaseInfo) {
+        if (initialReleaseInfo == null) {
+            checkUpdates()
+        }
     }
 
     AlertDialog(

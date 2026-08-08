@@ -145,6 +145,7 @@ fun MainAppContent(viewModel: IspViewModel) {
 
     var showGenerateBillsDialog by remember { mutableStateOf(false) }
     var showAutoUpdatePrompt by remember { mutableStateOf(false) }
+    var autoUpdateReleaseInfo by remember { mutableStateOf<com.example.util.GitHubReleaseInfo?>(null) }
     var showBackupAndRestoreScreen by remember { mutableStateOf(false) }
     var showAboutScreen by remember { mutableStateOf(false) }
     val initialAuthUser = remember {
@@ -185,11 +186,18 @@ fun MainAppContent(viewModel: IspViewModel) {
 
     LaunchedEffect(Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val result = AppUpdateManager.checkForUpdates(context)
-            result.onSuccess { info ->
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    showAutoUpdatePrompt = info.isNewer
+            try {
+                val result = AppUpdateManager.checkForUpdates(context)
+                result.onSuccess { info ->
+                    if (info.isNewer) {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            autoUpdateReleaseInfo = info
+                            showAutoUpdatePrompt = true
+                        }
+                    }
                 }
+            } catch (e: Throwable) {
+                android.util.Log.w("MainActivity", "Auto update check failed safely on startup: ${e.message}")
             }
         }
     }
@@ -647,6 +655,7 @@ fun MainAppContent(viewModel: IspViewModel) {
 
     if (showAutoUpdatePrompt) {
         AppUpdateDialog(
+            initialReleaseInfo = autoUpdateReleaseInfo,
             onDismissRequest = { showAutoUpdatePrompt = false }
         )
     }
