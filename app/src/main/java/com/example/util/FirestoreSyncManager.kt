@@ -21,6 +21,7 @@ import com.example.data.model.IspPackageEntity
 import com.example.data.model.PaymentEntity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -107,8 +108,14 @@ object FirestoreSyncManager {
                 .delete()
                 .await()
             Log.d(TAG, "Deleted doc $docId from cloud collection $collectionName")
+        } catch (e: FirebaseFirestoreException) {
+            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                Log.w(TAG, "Firestore delete permission denied for doc $docId: ${e.message}")
+            } else {
+                Log.w(TAG, "Firestore error deleting doc $docId: ${e.message}")
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Error deleting doc $docId from cloud: ${e.message}")
+            Log.w(TAG, "Error deleting doc $docId from cloud: ${e.message}")
         }
     }
 
@@ -270,8 +277,15 @@ object FirestoreSyncManager {
 
             Log.i(TAG, "Successfully synced all local data to Firestore for UID: $uid")
             true
+        } catch (e: FirebaseFirestoreException) {
+            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                Log.w(TAG, "Firestore sync skipped (Permission Denied): Check Firestore security rules or authentication status.")
+            } else {
+                Log.w(TAG, "Firestore error syncing local data: ${e.message}")
+            }
+            false
         } catch (e: Exception) {
-            Log.e(TAG, "Error syncing local data to Firestore: ${e.message}", e)
+            Log.w(TAG, "Error syncing local data to Firestore: ${e.message}")
             false
         }
     }
@@ -432,8 +446,15 @@ object FirestoreSyncManager {
 
             Log.i(TAG, "Successfully restored data from Firestore for UID: $uid")
             true
+        } catch (e: FirebaseFirestoreException) {
+            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                Log.w(TAG, "Firestore restore skipped (Permission Denied): Check Firestore security rules or authentication status.")
+            } else {
+                Log.w(TAG, "Firestore error restoring cloud data: ${e.message}")
+            }
+            false
         } catch (e: Exception) {
-            Log.e(TAG, "Error restoring from Firestore: ${e.message}", e)
+            Log.w(TAG, "Error restoring from Firestore: ${e.message}")
             false
         }
     }
@@ -450,7 +471,7 @@ class CloudSyncWorker(
         return if (success) {
             Result.success()
         } else {
-            Result.retry()
+            Result.failure()
         }
     }
 }
