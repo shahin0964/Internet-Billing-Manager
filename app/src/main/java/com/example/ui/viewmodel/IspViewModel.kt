@@ -67,17 +67,26 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
             application
         )
 
-        // Schedule & Trigger cloud sync if authenticated
-        com.example.util.FirestoreSyncManager.scheduleBackgroundSync(application)
+        // Schedule & Trigger cloud sync if authenticated safely
+        try {
+            com.example.util.FirestoreSyncManager.scheduleBackgroundSync(application)
+        } catch (e: Throwable) {
+            android.util.Log.e("IspViewModel", "Failed to schedule background sync: ${e.message}")
+        }
+
         viewModelScope.launch {
-            if (com.example.util.FirestoreSyncManager.getCurrentUid() != null) {
-                // If local DB is empty, attempt initial cloud restore
-                val existingCustomers = db.customerDao().getAllCustomers().first()
-                if (existingCustomers.isEmpty()) {
-                    com.example.util.FirestoreSyncManager.restoreCloudToLocal(application)
-                } else {
-                    com.example.util.FirestoreSyncManager.syncLocalToCloud(application)
+            try {
+                if (com.example.util.FirestoreSyncManager.getCurrentUid() != null) {
+                    // If local DB is empty, attempt initial cloud restore
+                    val existingCustomers = db.customerDao().getAllCustomers().first()
+                    if (existingCustomers.isEmpty()) {
+                        com.example.util.FirestoreSyncManager.restoreCloudToLocal(application)
+                    } else {
+                        com.example.util.FirestoreSyncManager.syncLocalToCloud(application)
+                    }
                 }
+            } catch (e: Throwable) {
+                android.util.Log.e("IspViewModel", "Cloud sync check failed: ${e.message}")
             }
         }
 

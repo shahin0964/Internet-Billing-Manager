@@ -115,7 +115,7 @@ fun MoreScreen(
         mutableStateOf(
             try {
                 com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 null
             }
         )
@@ -1111,7 +1111,7 @@ tonalElevation = 2.dp,
                             authUser = null
                             onShowToast("Logged out successfully")
                             onSignOut()
-                        } catch (e: Exception) {
+                        } catch (e: Throwable) {
                             onShowToast("Error logging out: ${e.localizedMessage}")
                         }
                     },

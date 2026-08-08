@@ -541,7 +541,7 @@ fun PinRecoveryDialog(
         mutableStateOf(
             try {
                 FirebaseAuth.getInstance().currentUser?.email ?: ""
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 ""
             }
         )
@@ -554,7 +554,7 @@ fun PinRecoveryDialog(
     val currentUser = remember {
         try {
             FirebaseAuth.getInstance().currentUser
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }
@@ -659,7 +659,7 @@ fun PinRecoveryDialog(
                                 isLoading = false
                                 errorMessage = e.localizedMessage ?: "Account verification failed. Incorrect password."
                             }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         isLoading = false
                         errorMessage = "Authentication service unavailable."
                     }

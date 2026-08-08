@@ -38,48 +38,61 @@ object FirestoreSyncManager {
      * Returns null for unauthenticated or guest users.
      */
     fun getCurrentUid(): String? {
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        return currentUser?.uid
+        return try {
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            currentUser?.uid
+        } catch (e: Throwable) {
+            Log.w(TAG, "FirebaseAuth not available or initialized: ${e.message}")
+            null
+        }
     }
 
     /**
      * Schedules periodic background sync using WorkManager (every 15 mins when connected).
      */
     fun scheduleBackgroundSync(context: Context) {
-        val uid = getCurrentUid() ?: return
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        try {
+            val uid = getCurrentUid() ?: return
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
-        val periodicWork = PeriodicWorkRequestBuilder<CloudSyncWorker>(15, TimeUnit.MINUTES)
-            .setConstraints(constraints)
-            .build()
+            val periodicWork = PeriodicWorkRequestBuilder<CloudSyncWorker>(15, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build()
 
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            "${WORK_NAME_PERIODIC}_$uid",
-            ExistingPeriodicWorkPolicy.KEEP,
-            periodicWork
-        )
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "${WORK_NAME_PERIODIC}_$uid",
+                ExistingPeriodicWorkPolicy.KEEP,
+                periodicWork
+            )
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error scheduling background sync: ${e.message}")
+        }
     }
 
     /**
      * Triggers an immediate one-time background sync when internet returns.
      */
     fun triggerSync(context: Context) {
-        val uid = getCurrentUid() ?: return
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        try {
+            val uid = getCurrentUid() ?: return
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
-        val oneTimeWork = OneTimeWorkRequestBuilder<CloudSyncWorker>()
-            .setConstraints(constraints)
-            .build()
+            val oneTimeWork = OneTimeWorkRequestBuilder<CloudSyncWorker>()
+                .setConstraints(constraints)
+                .build()
 
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "${WORK_NAME_ONE_TIME}_$uid",
-            ExistingWorkPolicy.REPLACE,
-            oneTimeWork
-        )
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                "${WORK_NAME_ONE_TIME}_$uid",
+                ExistingWorkPolicy.REPLACE,
+                oneTimeWork
+            )
+        } catch (e: Throwable) {
+            Log.e(TAG, "Error triggering sync: ${e.message}")
+        }
     }
 
     /**

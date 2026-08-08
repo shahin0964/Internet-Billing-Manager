@@ -151,7 +151,7 @@ fun MainAppContent(viewModel: IspViewModel) {
     val initialAuthUser = remember {
         try {
             com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }
@@ -159,7 +159,15 @@ fun MainAppContent(viewModel: IspViewModel) {
     var isGuestMode by remember { mutableStateOf(false) }
     var authModeSignUp by remember { mutableStateOf(false) }
     var showLoginRequiredDialog by remember { mutableStateOf(false) }
-    var isAppLocked by remember { mutableStateOf(com.example.util.PinLockManager.isPinLockEnabled(context)) }
+    var isAppLocked by remember {
+        mutableStateOf(
+            try {
+                com.example.util.PinLockManager.isPinLockEnabled(context)
+            } catch (e: Throwable) {
+                false
+            }
+        )
+    }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -232,7 +240,7 @@ fun MainAppContent(viewModel: IspViewModel) {
                             .addOnFailureListener { e ->
                                 onError(e.localizedMessage ?: "Sign up failed. Please try again.")
                             }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         onError("Firebase Auth is not configured yet. Please add google-services.json from your Firebase Console.")
                     }
                 },
@@ -260,7 +268,7 @@ fun MainAppContent(viewModel: IspViewModel) {
                         } else {
                             onError("Please enter a valid Gmail / Email address (e.g. user@example.com).")
                         }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         onError("Firebase Auth is not configured yet. Please add google-services.json from your Firebase Console.")
                     }
                 },
@@ -286,7 +294,7 @@ fun MainAppContent(viewModel: IspViewModel) {
                                     onError(e.localizedMessage ?: "Failed to send password reset email.")
                                 }
                         }
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         onError("Firebase Auth is not configured yet. Please add google-services.json from your Firebase Console.")
                     }
                 }
