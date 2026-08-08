@@ -63,8 +63,23 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
             db.paymentDao(),
             db.settingsDao(),
             db.expenseDao(),
-            db
+            db,
+            application
         )
+
+        // Schedule & Trigger cloud sync if authenticated
+        com.example.util.FirestoreSyncManager.scheduleBackgroundSync(application)
+        viewModelScope.launch {
+            if (com.example.util.FirestoreSyncManager.getCurrentUid() != null) {
+                // If local DB is empty, attempt initial cloud restore
+                val existingCustomers = db.customerDao().getAllCustomers().first()
+                if (existingCustomers.isEmpty()) {
+                    com.example.util.FirestoreSyncManager.restoreCloudToLocal(application)
+                } else {
+                    com.example.util.FirestoreSyncManager.syncLocalToCloud(application)
+                }
+            }
+        }
 
         customers = repository.customers.stateIn(
             viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()

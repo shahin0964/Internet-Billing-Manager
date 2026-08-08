@@ -479,7 +479,8 @@ object AppUpdateManager {
                 db.paymentDao(),
                 db.settingsDao(),
                 db.expenseDao(),
-                db
+                db,
+                context.applicationContext
             )
             repository.createAutomaticPreUpdateBackup(context)
         } catch (e: Exception) {

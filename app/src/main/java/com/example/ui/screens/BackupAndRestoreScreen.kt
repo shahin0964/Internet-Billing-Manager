@@ -58,6 +58,12 @@ fun BackupAndRestoreScreen(
     var fileToDelete by remember { mutableStateOf<File?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
 
+    // Cloud Sync States
+    var isCloudSyncing by remember { mutableStateOf(false) }
+    var showCloudRestoreConfirmDialog by remember { mutableStateOf(false) }
+    val currentUid = remember { com.example.util.FirestoreSyncManager.getCurrentUid() }
+    val coroutineScope = rememberCoroutineScope()
+
     // File Pickers
     val createDocLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/octet-stream")

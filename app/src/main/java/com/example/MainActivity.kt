@@ -24,16 +24,19 @@ import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.ReceiptLong
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -144,6 +147,41 @@ fun MainAppContent(viewModel: IspViewModel) {
     var showAutoUpdatePrompt by remember { mutableStateOf(false) }
     var showBackupAndRestoreScreen by remember { mutableStateOf(false) }
     var showAboutScreen by remember { mutableStateOf(false) }
+    val initialAuthUser = remember {
+        try {
+            com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        } catch (e: Exception) {
+            null
+        }
+    }
+    var isAuthChosen by remember { mutableStateOf(initialAuthUser != null) }
+    var isGuestMode by remember { mutableStateOf(false) }
+    var authModeSignUp by remember { mutableStateOf(false) }
+    var showLoginRequiredDialog by remember { mutableStateOf(false) }
+    var isAppLocked by remember { mutableStateOf(com.example.util.PinLockManager.isPinLockEnabled(context)) }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                if (com.example.util.PinLockManager.isPinLockEnabled(context)) {
+                    isAppLocked = true
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    fun runAction(action: () -> Unit) {
+        if (isGuestMode) {
+            showLoginRequiredDialog = true
+        } else {
+            action()
+        }
+    }
 
     LaunchedEffect(Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -163,10 +201,94 @@ fun MainAppContent(viewModel: IspViewModel) {
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            NavigationBar(
+    if (!isAuthChosen) {
+        if (authModeSignUp) {
+            com.example.ui.screens.SignUpScreen(
+                onSignUpClick = { name, email, phone, pass, onError, onSuccess ->
+                    try {
+                        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+                        auth.createUserWithEmailAndPassword(email.trim(), pass)
+                            .addOnSuccessListener { result ->
+                                val user = result.user
+                                if (user != null && name.isNotBlank()) {
+                                    val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                                        .setDisplayName(name.trim())
+                                        .build()
+                                    user.updateProfile(profileUpdates)
+                                }
+                                isGuestMode = false
+                                isAuthChosen = true
+                                viewModel.showToast("Account created for ${name.ifBlank { email }}")
+                                onSuccess()
+                            }
+                            .addOnFailureListener { e ->
+                                onError(e.localizedMessage ?: "Sign up failed. Please try again.")
+                            }
+                    } catch (e: Exception) {
+                        onError("Firebase Auth is not configured yet. Please add google-services.json from your Firebase Console.")
+                    }
+                },
+                onNavigateToLogin = {
+                    authModeSignUp = false
+                }
+            )
+        } else {
+            com.example.ui.screens.LoginScreen(
+                onLoginClick = { identifier, pass, rememberMe, onError, onSuccess ->
+                    try {
+                        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+                        val trimmedId = identifier.trim()
+                        if (trimmedId.contains("@")) {
+                            auth.signInWithEmailAndPassword(trimmedId, pass)
+                                .addOnSuccessListener { result ->
+                                    isGuestMode = false
+                                    isAuthChosen = true
+                                    viewModel.showToast("Logged in as ${result.user?.email ?: trimmedId}")
+                                    onSuccess()
+                                }
+                                .addOnFailureListener { e ->
+                                    onError(e.localizedMessage ?: "Login failed. Please check your credentials.")
+                                }
+                        } else {
+                            onError("Please enter a valid Gmail / Email address (e.g. user@example.com).")
+                        }
+                    } catch (e: Exception) {
+                        onError("Firebase Auth is not configured yet. Please add google-services.json from your Firebase Console.")
+                    }
+                },
+                onNavigateToSignUp = {
+                    authModeSignUp = true
+                },
+                onContinueAsGuest = {
+                    isGuestMode = true
+                    isAuthChosen = true
+                },
+                onForgotPasswordClick = { identifier, onError, onSuccess ->
+                    try {
+                        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+                        val email = identifier.trim()
+                        if (!email.contains("@")) {
+                            onError("Please enter a valid Gmail / Email address to receive password reset link.")
+                        } else {
+                            auth.sendPasswordResetEmail(email)
+                                .addOnSuccessListener {
+                                    onSuccess("Password reset email sent to $email")
+                                }
+                                .addOnFailureListener { e ->
+                                    onError(e.localizedMessage ?: "Failed to send password reset email.")
+                                }
+                        }
+                    } catch (e: Exception) {
+                        onError("Firebase Auth is not configured yet. Please add google-services.json from your Firebase Console.")
+                    }
+                }
+            )
+        }
+    } else {
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            bottomBar = {
+                NavigationBar(
                 modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface
@@ -218,15 +340,21 @@ fun MainAppContent(viewModel: IspViewModel) {
                             currentTab = NavTab.BILLING
                         },
                         onAddCustomerClick = {
-                            customerToEdit = null
-                            showCustomerDialog = true
+                            runAction {
+                                customerToEdit = null
+                                showCustomerDialog = true
+                            }
                         },
                         onCollectPaymentClick = {
-                            preSelectedPaymentBill = null
-                            showPaymentDialog = true
+                            runAction {
+                                preSelectedPaymentBill = null
+                                showPaymentDialog = true
+                            }
                         },
                         onGenerateBillsClick = {
-                            showGenerateBillsDialog = true
+                            runAction {
+                                showGenerateBillsDialog = true
+                            }
                         }
                     )
                 }
@@ -243,23 +371,33 @@ fun MainAppContent(viewModel: IspViewModel) {
                         selectedStatusFilter = customerStatusFilter,
                         onStatusFilterChange = { viewModel.customerStatusFilter.value = it },
                         onAddCustomerClick = {
-                            customerToEdit = null
-                            showCustomerDialog = true
+                            runAction {
+                                customerToEdit = null
+                                showCustomerDialog = true
+                            }
                         },
                         onEditCustomerClick = { cust ->
-                            customerToEdit = cust
-                            showCustomerDialog = true
+                            runAction {
+                                customerToEdit = cust
+                                showCustomerDialog = true
+                            }
                         },
                         onDeleteCustomerClick = { cust ->
-                            viewModel.deleteCustomer(cust)
+                            runAction {
+                                viewModel.deleteCustomer(cust)
+                            }
                         },
                         onToggleStatusClick = { cust ->
-                            viewModel.toggleCustomerStatus(cust)
+                            runAction {
+                                viewModel.toggleCustomerStatus(cust)
+                            }
                         },
                         onCollectPaymentForCustomer = { cust ->
-                            val unpaidForCust = bills.find { it.customerId == cust.id && it.dueAmount > 0 }
-                            preSelectedPaymentBill = unpaidForCust
-                            showPaymentDialog = true
+                            runAction {
+                                val unpaidForCust = bills.find { it.customerId == cust.id && it.dueAmount > 0 }
+                                preSelectedPaymentBill = unpaidForCust
+                                showPaymentDialog = true
+                            }
                         }
                     )
                 }
@@ -271,10 +409,16 @@ fun MainAppContent(viewModel: IspViewModel) {
                         currencySymbol = settings.currencySymbol,
                         searchQuery = billQuery,
                         onSearchQueryChange = { viewModel.billSearchQuery.value = it },
-                        onGenerateBillsClick = { showGenerateBillsDialog = true },
+                        onGenerateBillsClick = {
+                            runAction {
+                                showGenerateBillsDialog = true
+                            }
+                        },
                         onRecordPaymentForBill = { bill ->
-                            preSelectedPaymentBill = bill
-                            showPaymentDialog = true
+                            runAction {
+                                preSelectedPaymentBill = bill
+                                showPaymentDialog = true
+                            }
                         }
                     )
                 }
@@ -287,8 +431,10 @@ fun MainAppContent(viewModel: IspViewModel) {
                         searchQuery = collectionQuery,
                         onSearchQueryChange = { viewModel.collectionSearchQuery.value = it },
                         onCollectPaymentClick = {
-                            preSelectedPaymentBill = null
-                            showPaymentDialog = true
+                            runAction {
+                                preSelectedPaymentBill = null
+                                showPaymentDialog = true
+                            }
                         }
                     )
                 }
@@ -297,29 +443,52 @@ fun MainAppContent(viewModel: IspViewModel) {
                     MoreScreen(
                         settings = settings,
                         packages = packages,
-                        onUpdateSettings = { newSettings -> viewModel.updateSettings(newSettings) },
+                        onUpdateSettings = { newSettings ->
+                            runAction {
+                                viewModel.updateSettings(newSettings)
+                            }
+                        },
                         onAddPackageClick = {
-                            packageToEdit = null
-                            showPackageDialog = true
+                            runAction {
+                                packageToEdit = null
+                                showPackageDialog = true
+                            }
                         },
                         onEditPackageClick = { pkg ->
-                            packageToEdit = pkg
-                            showPackageDialog = true
+                            runAction {
+                                packageToEdit = pkg
+                                showPackageDialog = true
+                            }
                         },
                         onExportBackup = { callback ->
-                            viewModel.exportBackup(callback)
+                            runAction {
+                                viewModel.exportBackup(callback)
+                            }
                         },
                         onShowToast = { msg ->
                             viewModel.showToast(msg)
                         },
+                        isGuestMode = isGuestMode,
                         onOpenExpenseManagement = {
-                            showExpenseManagementScreen = true
+                            runAction {
+                                showExpenseManagementScreen = true
+                            }
                         },
                         onOpenBackupAndRestore = {
-                            showBackupAndRestoreScreen = true
+                            runAction {
+                                showBackupAndRestoreScreen = true
+                            }
                         },
                         onOpenAbout = {
                             showAboutScreen = true
+                        },
+                        onOpenLogin = {
+                            authModeSignUp = false
+                            isAuthChosen = false
+                        },
+                        onSignOut = {
+                            isGuestMode = false
+                            isAuthChosen = false
                         }
                     )
                 }
@@ -369,9 +538,51 @@ fun MainAppContent(viewModel: IspViewModel) {
             )
         ) {
             com.example.ui.screens.AboutScreen(
-                onBackClick = { showAboutScreen = false }
+                onBackClick = { showAboutScreen = false },
+                isGuestMode = isGuestMode
             )
         }
+    }
+
+    if (showLoginRequiredDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showLoginRequiredDialog = false },
+            title = {
+                Text(
+                    text = "Login Required",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "You are currently in Guest Mode. Please log in or sign up to perform this action.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLoginRequiredDialog = false
+                        authModeSignUp = false
+                        isAuthChosen = false
+                    }
+                ) {
+                    Text("Login")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {
+                        showLoginRequiredDialog = false
+                        authModeSignUp = true
+                        isAuthChosen = false
+                    }
+                ) {
+                    Text("Sign Up")
+                }
+            }
+        )
     }
 
     // Dialogs
@@ -439,4 +650,16 @@ fun MainAppContent(viewModel: IspViewModel) {
             onDismissRequest = { showAutoUpdatePrompt = false }
         )
     }
+
+    if (isAppLocked) {
+        com.example.ui.components.PinUnlockOverlayScreen(
+            onUnlocked = {
+                isAppLocked = false
+            },
+            onShowToast = { msg ->
+                viewModel.showToast(msg)
+            }
+        )
+    }
+}
 }

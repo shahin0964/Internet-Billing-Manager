@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.platform.testTag
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,6 +55,7 @@ import androidx.compose.foundation.shape.CircleShape
 import com.example.ui.components.AppUpdateDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -85,9 +88,12 @@ fun MoreScreen(
     onEditPackageClick: (IspPackageEntity) -> Unit,
     onExportBackup: ((String) -> Unit) -> Unit,
     onShowToast: (String) -> Unit,
+    isGuestMode: Boolean = false,
     onOpenExpenseManagement: () -> Unit = {},
     onOpenBackupAndRestore: () -> Unit = {},
-    onOpenAbout: () -> Unit = {}
+    onOpenAbout: () -> Unit = {},
+    onOpenLogin: () -> Unit = {},
+    onSignOut: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -99,6 +105,21 @@ fun MoreScreen(
     var themeMode by remember(settings) { mutableStateOf(settings.themeMode) }
     var logoUri by remember(settings) { mutableStateOf(settings.logoUri) }
     var showUpdateDialog by remember { mutableStateOf(false) }
+    var showSignOutDialog by remember { mutableStateOf(false) }
+    var showSecurityDialog by remember { mutableStateOf(false) }
+    var isFingerprintLockEnabled by remember { mutableStateOf(false) }
+    var isPinLockEnabled by remember { mutableStateOf(com.example.util.PinLockManager.isPinLockEnabled(context)) }
+    var showPinSetupDialog by remember { mutableStateOf(false) }
+    var showPinChangeDialog by remember { mutableStateOf(false) }
+    var authUser by remember {
+        mutableStateOf(
+            try {
+                com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+            } catch (e: Exception) {
+                null
+            }
+        )
+    }
 
     val imagePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
@@ -800,46 +821,142 @@ tonalElevation = 2.dp,
             }
         }
 
-        // About Option (VERY BOTTOM - LAST OPTION)
-        item {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpenAbout() },
-                shape = RoundedCornerShape(18.dp),
-                shadowElevation = 6.dp,
-                tonalElevation = 3.dp,
-                color = MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
-                )
-            ) {
-                Row(
+        // Security Option (ONLY for authenticated users)
+        if (!isGuestMode) {
+            item {
+                Surface(
                     modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    SectionHeader(
-                        title = androidx.compose.ui.res.stringResource(com.example.R.string.about),
-                        subtitle = androidx.compose.ui.res.stringResource(com.example.R.string.about_subtitle)
+                        .fillMaxWidth()
+                        .clickable { showSecurityDialog = true },
+                    shape = RoundedCornerShape(18.dp),
+                    shadowElevation = 6.dp,
+                    tonalElevation = 3.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        SectionHeader(
+                            title = "Security",
+                            subtitle = "PIN Lock & Biometric Security"
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Icon(
-                            imageVector = Icons.Default.TouchApp,
-                            contentDescription = "Tap to open",
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Security,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.TouchApp,
+                                contentDescription = "Tap to open",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // App Information (ONLY for authenticated users)
+        if (!isGuestMode) {
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenAbout() },
+                    shape = RoundedCornerShape(18.dp),
+                    shadowElevation = 6.dp,
+                    tonalElevation = 3.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        SectionHeader(
+                            title = androidx.compose.ui.res.stringResource(com.example.R.string.about),
+                            subtitle = androidx.compose.ui.res.stringResource(com.example.R.string.about_subtitle)
                         )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.TouchApp,
+                                contentDescription = "Tap to open",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Logout Option (VERY BOTTOM - ONLY for authenticated users)
+        if (!isGuestMode) {
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showSignOutDialog = true },
+                    shape = RoundedCornerShape(18.dp),
+                    shadowElevation = 6.dp,
+                    tonalElevation = 3.dp,
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        SectionHeader(
+                            title = "Logout",
+                            subtitle = "Sign out from your account"
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Security,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.TouchApp,
+                                contentDescription = "Tap to open",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
@@ -851,6 +968,189 @@ tonalElevation = 2.dp,
     if (showUpdateDialog) {
         AppUpdateDialog(
             onDismissRequest = { showUpdateDialog = false }
+        )
+    }
+
+    if (showSecurityDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showSecurityDialog = false },
+            title = {
+                Text(
+                    text = "Security",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // PIN Lock row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "PIN App Lock",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = if (isPinLockEnabled) "App lock active (4-6 digit PIN)" else "Secure app with a 4-6 digit PIN",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = isPinLockEnabled,
+                            onCheckedChange = { checked ->
+                                if (checked) {
+                                    if (com.example.util.PinLockManager.hasPinSet(context)) {
+                                        com.example.util.PinLockManager.setPinLockEnabled(context, true)
+                                        isPinLockEnabled = true
+                                        onShowToast("PIN Lock enabled")
+                                    } else {
+                                        showPinSetupDialog = true
+                                    }
+                                } else {
+                                    com.example.util.PinLockManager.setPinLockEnabled(context, false)
+                                    isPinLockEnabled = false
+                                    onShowToast("PIN Lock disabled")
+                                }
+                            },
+                            modifier = Modifier.testTag("pin_lock_switch")
+                        )
+                    }
+
+                    if (isPinLockEnabled || com.example.util.PinLockManager.hasPinSet(context)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            OutlinedButton(
+                                onClick = { showPinChangeDialog = true },
+                                modifier = Modifier.testTag("change_pin_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Security,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Change PIN")
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // Fingerprint / Biometric Lock row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Fingerprint / Biometric Lock",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Unlock app using fingerprint or face recognition",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = isFingerprintLockEnabled,
+                            onCheckedChange = { checked ->
+                                isFingerprintLockEnabled = checked
+                                onShowToast(if (checked) "Biometric Lock enabled" else "Biometric Lock disabled")
+                            },
+                            modifier = Modifier.testTag("fingerprint_lock_switch")
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showSecurityDialog = false }
+                ) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
+    if (showSignOutDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            title = {
+                Text(
+                    text = "Logout",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to log out from your account?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSignOutDialog = false
+                        try {
+                            com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                            authUser = null
+                            onShowToast("Logged out successfully")
+                            onSignOut()
+                        } catch (e: Exception) {
+                            onShowToast("Error logging out: ${e.localizedMessage}")
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Logout")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showSignOutDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showPinSetupDialog) {
+        com.example.ui.components.PinSetupDialog(
+            onDismiss = { showPinSetupDialog = false },
+            onSuccess = {
+                showPinSetupDialog = false
+                isPinLockEnabled = true
+            },
+            onShowToast = onShowToast
+        )
+    }
+
+    if (showPinChangeDialog) {
+        com.example.ui.components.PinChangeDialog(
+            onDismiss = { showPinChangeDialog = false },
+            onSuccess = {
+                showPinChangeDialog = false
+            },
+            onShowToast = onShowToast
         )
     }
 }

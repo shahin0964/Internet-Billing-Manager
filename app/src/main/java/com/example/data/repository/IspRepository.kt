@@ -32,7 +32,8 @@ class IspRepository(
     private val paymentDao: PaymentDao,
     private val settingsDao: BusinessSettingsDao,
     private val expenseDao: ExpenseDao,
-    private val db: IspDatabase
+    private val db: IspDatabase,
+    private val context: Context? = null
 ) {
     val customers: Flow<List<CustomerEntity>> = customerDao.getAllCustomers()
     val packages: Flow<List<IspPackageEntity>> = packageDao.getAllPackages()
@@ -46,48 +47,70 @@ class IspRepository(
         return paymentDao.getCollectedAmountForDate(date)
     }
 
+    private fun notifyCloudSync() {
+        context?.let { com.example.util.FirestoreSyncManager.triggerSync(it) }
+    }
+
     suspend fun saveExpense(expense: ExpenseEntity): Long {
-        return expenseDao.insertExpense(expense)
+        val result = expenseDao.insertExpense(expense)
+        notifyCloudSync()
+        return result
     }
 
     suspend fun updateExpense(expense: ExpenseEntity) {
         expenseDao.updateExpense(expense)
+        notifyCloudSync()
     }
 
     suspend fun deleteExpense(expense: ExpenseEntity) {
         expenseDao.deleteExpense(expense)
+        context?.let { com.example.util.FirestoreSyncManager.deleteDocumentFromCloud(it, "expenses", expense.id.toString()) }
+        notifyCloudSync()
     }
 
     suspend fun saveExpenseCategory(categoryName: String): Long {
-        return expenseDao.insertCategory(ExpenseCategoryEntity(name = categoryName.trim()))
+        val result = expenseDao.insertCategory(ExpenseCategoryEntity(name = categoryName.trim()))
+        notifyCloudSync()
+        return result
     }
 
     suspend fun saveCustomer(customer: CustomerEntity): Long {
-        return customerDao.insertCustomer(customer)
+        val result = customerDao.insertCustomer(customer)
+        notifyCloudSync()
+        return result
     }
 
     suspend fun updateCustomer(customer: CustomerEntity) {
         customerDao.updateCustomer(customer)
+        notifyCloudSync()
     }
 
     suspend fun deleteCustomer(customer: CustomerEntity) {
         customerDao.deleteCustomer(customer)
+        context?.let { com.example.util.FirestoreSyncManager.deleteDocumentFromCloud(it, "customers", customer.id.toString()) }
+        notifyCloudSync()
     }
 
     suspend fun updateCustomerStatus(id: Long, status: String) {
         customerDao.updateCustomerStatus(id, status)
+        notifyCloudSync()
     }
 
     suspend fun savePackage(pkg: IspPackageEntity): Long {
-        return packageDao.insertPackage(pkg)
+        val result = packageDao.insertPackage(pkg)
+        notifyCloudSync()
+        return result
     }
 
     suspend fun updatePackage(pkg: IspPackageEntity) {
         packageDao.updatePackage(pkg)
+        notifyCloudSync()
     }
 
     suspend fun deletePackage(pkg: IspPackageEntity) {
         packageDao.deletePackage(pkg)
+        context?.let { com.example.util.FirestoreSyncManager.deleteDocumentFromCloud(it, "packages", pkg.id.toString()) }
+        notifyCloudSync()
     }
 
     suspend fun generateMonthlyBills(billingMonth: String, dueDate: String): Int {
@@ -129,6 +152,7 @@ class IspRepository(
         if (newBills.isNotEmpty()) {
             billDao.insertBills(newBills)
         }
+        notifyCloudSync()
         return generatedCount
     }
 
@@ -186,12 +210,14 @@ class IspRepository(
             notes = notes
         )
         paymentDao.insertPayment(payment)
+        notifyCloudSync()
 
         return true
     }
 
     suspend fun saveSettings(settings: BusinessSettingsEntity) {
         settingsDao.insertOrUpdateSettings(settings)
+        notifyCloudSync()
     }
 
     suspend fun exportDataJson(): String {

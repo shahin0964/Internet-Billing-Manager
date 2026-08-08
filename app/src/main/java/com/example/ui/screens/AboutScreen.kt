@@ -83,7 +83,8 @@ data class LicenseInfo(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    isGuestMode: Boolean = false
 ) {
     val context = LocalContext.current
 
@@ -127,53 +128,55 @@ fun AboutScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // A. App Information
-            item {
-                AboutSectionCard(
-                    title = stringResource(R.string.about_section_app_info),
-                    icon = Icons.Default.Info,
-                    isExpanded = isAppInfoExpanded,
-                    onToggleExpand = { isAppInfoExpanded = !isAppInfoExpanded }
-                ) {
-                    Column(
-                        modifier = Modifier.padding(top = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+            if (!isGuestMode) {
+                item {
+                    AboutSectionCard(
+                        title = stringResource(R.string.about_section_app_info),
+                        icon = Icons.Default.Info,
+                        isExpanded = isAppInfoExpanded,
+                        onToggleExpand = { isAppInfoExpanded = !isAppInfoExpanded }
                     ) {
-                        val minSdkVal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            context.applicationInfo.minSdkVersion
-                        } else {
-                            24
-                        }
+                        Column(
+                            modifier = Modifier.padding(top = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            val minSdkVal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                context.applicationInfo.minSdkVersion
+                            } else {
+                                24
+                            }
 
-                        InfoRow(label = stringResource(R.string.about_app_name), value = stringResource(R.string.about_app_name))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            InfoRow(label = stringResource(R.string.about_app_name), value = stringResource(R.string.about_app_name))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        InfoRow(label = stringResource(R.string.about_version), value = BuildConfig.VERSION_NAME)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            InfoRow(label = stringResource(R.string.about_version), value = BuildConfig.VERSION_NAME)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        InfoRow(label = stringResource(R.string.about_build), value = "${BuildConfig.VERSION_CODE}")
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            InfoRow(label = stringResource(R.string.about_build), value = "${BuildConfig.VERSION_CODE}")
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        InfoRow(label = stringResource(R.string.about_app_id), value = BuildConfig.APPLICATION_ID)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            InfoRow(label = stringResource(R.string.about_app_id), value = BuildConfig.APPLICATION_ID)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        InfoRow(label = stringResource(R.string.about_platform), value = stringResource(R.string.about_platform))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            InfoRow(label = stringResource(R.string.about_platform), value = stringResource(R.string.about_platform))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        InfoRow(label = stringResource(R.string.about_min_android), value = "Android 7.0+ (API $minSdkVal)")
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            InfoRow(label = stringResource(R.string.about_min_android), value = "Android 7.0+ (API $minSdkVal)")
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                            Text(
-                                text = stringResource(R.string.about_purpose_label),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = stringResource(R.string.about_purpose_desc),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                Text(
+                                    text = stringResource(R.string.about_purpose_label),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = stringResource(R.string.about_purpose_desc),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
