@@ -70,14 +70,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import com.example.ui.components.AppUpdateDialog
-import com.example.util.AppUpdateManager
-import com.example.util.GitHubReleaseInfo
-import kotlinx.coroutines.launch
 import com.example.BuildConfig
 import com.example.R
 
@@ -94,31 +86,6 @@ fun AboutScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
-
-    val scope = rememberCoroutineScope()
-    var isCheckingUpdate by remember { mutableStateOf(true) }
-    var releaseInfo by remember { mutableStateOf<GitHubReleaseInfo?>(null) }
-    var updateCheckFailed by remember { mutableStateOf(false) }
-    var showUpdateDialog by remember { mutableStateOf(false) }
-
-    fun checkUpdates() {
-        isCheckingUpdate = true
-        updateCheckFailed = false
-        scope.launch {
-            val res = AppUpdateManager.checkForUpdates(context)
-            res.onSuccess { info ->
-                releaseInfo = info
-                isCheckingUpdate = false
-            }.onFailure {
-                updateCheckFailed = true
-                isCheckingUpdate = false
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        checkUpdates()
-    }
 
     // Expandable card states (default to expanded)
     var isAppInfoExpanded by remember { mutableStateOf(true) }
@@ -184,99 +151,6 @@ fun AboutScreen(
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                         InfoRow(label = stringResource(R.string.about_build), value = "${BuildConfig.VERSION_CODE}")
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                        // Update Status Row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    if (releaseInfo?.isNewer == true) {
-                                        showUpdateDialog = true
-                                    } else {
-                                        checkUpdates()
-                                    }
-                                }
-                                .padding(vertical = 2.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.about_update_status),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                when {
-                                    isCheckingUpdate -> {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(14.dp),
-                                            strokeWidth = 2.dp,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.checking_updates),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    releaseInfo?.isNewer == true -> {
-                                        Surface(
-                                            color = MaterialTheme.colorScheme.primaryContainer,
-                                            shape = RoundedCornerShape(6.dp)
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.update_status_available, releaseInfo?.version ?: ""),
-                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                            )
-                                        }
-                                    }
-                                    updateCheckFailed -> {
-                                        Text(
-                                            text = stringResource(R.string.update_status_unavailable),
-                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                    else -> {
-                                        Surface(
-                                            color = MaterialTheme.colorScheme.secondaryContainer,
-                                            shape = RoundedCornerShape(6.dp)
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.update_status_up_to_date),
-                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        if (releaseInfo?.isNewer == true) {
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Button(
-                                onClick = { showUpdateDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SystemUpdate,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = stringResource(R.string.update_status_available, releaseInfo?.version ?: ""))
-                            }
-                        }
-
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                         InfoRow(label = stringResource(R.string.about_app_id), value = BuildConfig.APPLICATION_ID)
@@ -652,12 +526,6 @@ fun AboutScreen(
                 }
             }
         }
-    }
-
-    if (showUpdateDialog) {
-        AppUpdateDialog(
-            onDismissRequest = { showUpdateDialog = false }
-        )
     }
 }
 

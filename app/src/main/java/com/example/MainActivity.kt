@@ -149,10 +149,8 @@ fun MainAppContent(viewModel: IspViewModel) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val result = AppUpdateManager.checkForUpdates(context)
             result.onSuccess { info ->
-                if (info.isNewer) {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        showAutoUpdatePrompt = true
-                    }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    showAutoUpdatePrompt = info.isNewer
                 }
             }
         }

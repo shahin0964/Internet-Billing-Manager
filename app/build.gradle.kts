@@ -17,8 +17,13 @@ android {
     applicationId = "com.aistudio.ispbilling.control"
     minSdk = 24
     targetSdk = 36
-    versionCode = 8
-    versionName = "1.0.8"
+    val envVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() }
+      ?: project.findProperty("versionName")?.toString()?.takeIf { it.isNotBlank() }
+    val envVersionCode = System.getenv("VERSION_CODE")?.takeIf { it.isNotBlank() }?.toIntOrNull()
+      ?: project.findProperty("versionCode")?.toString()?.toIntOrNull()
+
+    versionCode = envVersionCode ?: 8
+    versionName = envVersionName ?: "1.0.8"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

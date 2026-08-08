@@ -82,14 +82,17 @@ jobs:
           fi
 
       - name: Build Release APK
+        env:
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             export KEYSTORE_PATH="${{ github.workspace }}/release.keystore"
           fi
           if [ -f "./gradlew" ]; then
-            ./gradlew :app:assembleRelease --stacktrace
+            ./gradlew :app:assembleRelease -PversionName="${VERSION_NAME}" -PversionCode="${VERSION_CODE}" --stacktrace
           else
-            gradle :app:assembleRelease --stacktrace
+            gradle :app:assembleRelease -PversionName="${VERSION_NAME}" -PversionCode="${VERSION_CODE}" --stacktrace
           fi
 
       - name: Locate and Prepare Output APK
@@ -166,6 +169,21 @@ jobs:
 
               if [ -z "$PKG_NAME" ]; then
                 echo "ERROR: Could not parse package name from APK!"
+                exit 1
+              fi
+
+              if [ "$PKG_NAME" != "com.aistudio.ispbilling.control" ]; then
+                echo "ERROR: Package name ($PKG_NAME) does not match com.aistudio.ispbilling.control!"
+                exit 1
+              fi
+
+              if [ -n "$VERSION_NAME" ] && [ "$VER_NAME" != "$VERSION_NAME" ]; then
+                echo "ERROR: Built APK versionName ($VER_NAME) does not match expected VERSION_NAME ($VERSION_NAME)!"
+                exit 1
+              fi
+
+              if [ -n "$VERSION_CODE" ] && [ "$VER_CODE" != "$VERSION_CODE" ]; then
+                echo "ERROR: Built APK versionCode ($VER_CODE) does not match expected VERSION_CODE ($VERSION_CODE)!"
                 exit 1
               fi
             fi

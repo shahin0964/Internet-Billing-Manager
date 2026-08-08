@@ -355,6 +355,7 @@ fun AppUpdateDialog(
                                     val downloadResult = AppUpdateManager.downloadApk(
                                         context = context,
                                         downloadUrl = apkUrl,
+                                        expectedVersionName = releaseInfo?.version,
                                         onProgress = { pct ->
                                             downloadProgress = pct / 100f
                                         }
@@ -362,9 +363,10 @@ fun AppUpdateDialog(
                                     downloadResult.onSuccess { file ->
                                         downloadedFile = file
                                         state = UpdateState.READY_TO_INSTALL
+                                        onDismissRequest()
                                         AppUpdateManager.installApk(context, file)
                                     }.onFailure { err ->
-                                        errorMessage = context.getString(R.string.unable_to_check_updates)
+                                        errorMessage = err.message ?: context.getString(R.string.unable_to_check_updates)
                                         state = UpdateState.ERROR
                                     }
                                 }
@@ -380,6 +382,7 @@ fun AppUpdateDialog(
                     Button(
                         onClick = {
                             downloadedFile?.let { file ->
+                                onDismissRequest()
                                 AppUpdateManager.installApk(context, file)
                             }
                         },

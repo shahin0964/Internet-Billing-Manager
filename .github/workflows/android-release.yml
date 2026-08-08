@@ -79,14 +79,17 @@ jobs:
           fi
 
       - name: Build Release APK
+        env:
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             export KEYSTORE_PATH="release.keystore"
           fi
           if [ -f "./gradlew" ]; then
-            ./gradlew :app:assembleRelease --stacktrace
+            ./gradlew :app:assembleRelease -PversionName="${VERSION_NAME}" -PversionCode="${VERSION_CODE}" --stacktrace
           else
-            gradle :app:assembleRelease --stacktrace
+            gradle :app:assembleRelease -PversionName="${VERSION_NAME}" -PversionCode="${VERSION_CODE}" --stacktrace
           fi
 
       - name: Locate and Rename Output APK
@@ -117,6 +120,47 @@ jobs:
 
           echo "Final renamed APK path: app/build/outputs/apk/release/InternetBillManagement.apk"
           echo "Final renamed APK path: release/InternetBillManagement.apk"
+
+      - name: Verify Release APK Metadata
+        run: |
+          APK_PATH="app/build/outputs/apk/release/InternetBillManagement.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "ERROR: Release APK file missing at $APK_PATH!"
+            exit 1
+          fi
+
+          AAPT_BIN=""
+          if [ -d "$ANDROID_HOME/build-tools" ]; then
+            AAPT_BIN=$(find "$ANDROID_HOME/build-tools" -name "aapt2" -o -name "aapt" | sort -V | tail -n 1)
+          fi
+
+          if [ -n "$AAPT_BIN" ] && [ -x "$AAPT_BIN" ]; then
+            echo "Using AAPT binary: $AAPT_BIN"
+            BADGING_OUTPUT=$("$AAPT_BIN" dump badging "$APK_PATH" 2>/dev/null || true)
+            if [ -n "$BADGING_OUTPUT" ]; then
+              PKG_NAME=$(echo "$BADGING_OUTPUT" | grep -oP "package: name='\K[^']+" || true)
+              VER_CODE=$(echo "$BADGING_OUTPUT" | grep -oP "versionCode='\K[^']+" || true)
+              VER_NAME=$(echo "$BADGING_OUTPUT" | grep -oP "versionName='\K[^']+" || true)
+              echo "Package Name: $PKG_NAME"
+              echo "Version Code: $VER_CODE (Expected: $VERSION_CODE)"
+              echo "Version Name: $VER_NAME (Expected: $VERSION_NAME)"
+
+              if [ "$PKG_NAME" != "com.aistudio.ispbilling.control" ]; then
+                echo "ERROR: Package name ($PKG_NAME) does not match com.aistudio.ispbilling.control!"
+                exit 1
+              fi
+
+              if [ -n "$VERSION_NAME" ] && [ "$VER_NAME" != "$VERSION_NAME" ]; then
+                echo "ERROR: Built APK versionName ($VER_NAME) does not match expected VERSION_NAME ($VERSION_NAME)!"
+                exit 1
+              fi
+
+              if [ -n "$VERSION_CODE" ] && [ "$VER_CODE" != "$VERSION_CODE" ]; then
+                echo "ERROR: Built APK versionCode ($VER_CODE) does not match expected VERSION_CODE ($VERSION_CODE)!"
+                exit 1
+              fi
+            fi
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

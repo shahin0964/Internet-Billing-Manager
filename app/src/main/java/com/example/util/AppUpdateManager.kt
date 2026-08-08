@@ -75,14 +75,31 @@ object AppUpdateManager {
     }
 
     /**
-     * Get installed app version name safely.
+     * Get installed app version name safely from PackageManager or BuildConfig.
      */
     fun getInstalledVersion(context: Context): String {
         return try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.0.8"
+            pInfo.versionName?.takeIf { it.isNotBlank() } ?: BuildConfig.VERSION_NAME
         } catch (e: Exception) {
-            "1.0.8"
+            BuildConfig.VERSION_NAME
+        }
+    }
+
+    /**
+     * Get installed app version code safely from PackageManager or BuildConfig.
+     */
+    fun getInstalledVersionCode(context: Context): Long {
+        return try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode.toLong()
+            }
+        } catch (e: Exception) {
+            BuildConfig.VERSION_CODE.toLong()
         }
     }
 
@@ -93,10 +110,14 @@ object AppUpdateManager {
         val cleanInstalled = installedVersion.trim().removePrefix("v").removePrefix("V")
         val cleanLatest = latestVersion.trim().removePrefix("v").removePrefix("V")
 
-        if (cleanInstalled == cleanLatest) return false
+        if (cleanInstalled.equals(cleanLatest, ignoreCase = true)) return false
 
-        val installedParts = cleanInstalled.split(".", "-", "+").mapNotNull { it.toIntOrNull() }
-        val latestParts = cleanLatest.split(".", "-", "+").mapNotNull { it.toIntOrNull() }
+        val installedParts = cleanInstalled.split(".", "-", "+", "_").mapNotNull { it.toIntOrNull() }
+        val latestParts = cleanLatest.split(".", "-", "+", "_").mapNotNull { it.toIntOrNull() }
+
+        if (installedParts.isEmpty() || latestParts.isEmpty()) {
+            return false
+        }
 
         val maxLen = maxOf(installedParts.size, latestParts.size)
         for (i in 0 until maxLen) {
@@ -262,6 +283,7 @@ object AppUpdateManager {
     suspend fun downloadApk(
         context: Context,
         downloadUrl: String,
+        expectedVersionName: String? = null,
         onProgress: (Int) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         if (!isNetworkAvailable(context)) {
@@ -310,7 +332,20 @@ object AppUpdateManager {
 
             val fileLength = connection.contentLength
             val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
-            val outputFile = File(downloadDir, "app-update.apk")
+
+            // Clean up any stale APK files in download directory
+            try {
+                downloadDir.listFiles()?.forEach { file ->
+                    if (file.name.startsWith("app-update", ignoreCase = true) || file.name.endsWith(".apk", ignoreCase = true)) {
+                        file.delete()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to clean old update APK cache: ${e.message}")
+            }
+
+            val safeVersion = expectedVersionName?.trim()?.removePrefix("v")?.removePrefix("V")?.replace("[^a-zA-Z0-9.-_]".toRegex(), "") ?: "latest"
+            val outputFile = File(downloadDir, "app-update-$safeVersion.apk")
 
             if (outputFile.exists()) {
                 outputFile.delete()
@@ -348,10 +383,85 @@ object AppUpdateManager {
             }
 
             Log.d(TAG, "APK download completed: ${outputFile.absolutePath} (${outputFile.length()} bytes)")
+
+            // Verify package name, version code and version name before returning
+            val verifyRes = verifyDownloadedApk(context, outputFile, expectedVersionName)
+            if (verifyRes.isFailure) {
+                val err = verifyRes.exceptionOrNull() ?: Exception("Downloaded APK failed verification")
+                Log.e(TAG, "APK verification failed: ${err.message}")
+                outputFile.delete()
+                return@withContext Result.failure(err)
+            }
+
             Result.success(outputFile)
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading APK: ${e.message}", e)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Verify package identity, version code, and version name of a downloaded APK file before installation.
+     */
+    fun verifyDownloadedApk(
+        context: Context,
+        apkFile: File,
+        expectedVersionName: String? = null
+    ): Result<Boolean> {
+        try {
+            if (!apkFile.exists() || apkFile.length() == 0L) {
+                return Result.failure(Exception("Downloaded APK file is missing or empty"))
+            }
+
+            val pInfo = context.packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0)
+                ?: return Result.failure(Exception("Downloaded file is not a valid Android package"))
+
+            val currentPkg = context.packageName
+            val apkPkg = pInfo.packageName
+
+            if (!apkPkg.isNullOrBlank() && apkPkg != currentPkg) {
+                return Result.failure(
+                    Exception("Downloaded APK package ($apkPkg) does not match current app ($currentPkg)")
+                )
+            }
+
+            val installedCode = getInstalledVersionCode(context)
+            val apkCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode.toLong()
+            }
+
+            val apkVersionName = pInfo.versionName ?: ""
+            val installedVersion = getInstalledVersion(context)
+
+            Log.d(
+                TAG,
+                "APK Verification: pkg=$apkPkg, apkVersionCode=$apkCode (installedCode=$installedCode), apkVersionName=$apkVersionName (installedVer=$installedVersion, expectedVer=$expectedVersionName)"
+            )
+
+            if (apkCode <= installedCode) {
+                return Result.failure(
+                    Exception("Downloaded APK version code ($apkCode) is not newer than currently installed version code ($installedCode). Update aborted.")
+                )
+            }
+
+            if (!expectedVersionName.isNullOrBlank()) {
+                val cleanExpected = expectedVersionName.trim().removePrefix("v").removePrefix("V")
+                val cleanApkVer = apkVersionName.trim().removePrefix("v").removePrefix("V")
+
+                if (cleanApkVer.isNotBlank() && isVersionNewer(cleanApkVer, cleanExpected)) {
+                    return Result.failure(
+                        Exception("Downloaded APK version ($cleanApkVer) does not match expected target release ($cleanExpected). Update aborted.")
+                    )
+                }
+            }
+
+            return Result.success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error verifying downloaded APK: ${e.message}", e)
+            return Result.failure(e)
         }
     }
 
@@ -385,6 +495,13 @@ object AppUpdateManager {
         try {
             if (!apkFile.exists() || apkFile.length() == 0L) {
                 Toast.makeText(context, "APK file is invalid or missing", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val verification = verifyDownloadedApk(context, apkFile)
+            if (verification.isFailure) {
+                val msg = verification.exceptionOrNull()?.message ?: "APK verification failed"
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 return
             }
 
