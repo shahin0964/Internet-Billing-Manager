@@ -241,7 +241,7 @@ fun MainAppContent(viewModel: IspViewModel) {
                                 onError(e.localizedMessage ?: "Sign up failed. Please try again.")
                             }
                     } catch (e: Throwable) {
-                        onError("Firebase Auth is not configured yet. Please add google-services.json from your Firebase Console.")
+                        onError(e.localizedMessage ?: e.message ?: "Sign up error occurred.")
                     }
                 },
                 onNavigateToLogin = {
@@ -269,7 +269,7 @@ fun MainAppContent(viewModel: IspViewModel) {
                             onError("Please enter a valid Gmail / Email address (e.g. user@example.com).")
                         }
                     } catch (e: Throwable) {
-                        onError("Firebase Auth is not configured yet. Please add google-services.json from your Firebase Console.")
+                        onError(e.localizedMessage ?: e.message ?: "Login error occurred.")
                     }
                 },
                 onNavigateToSignUp = {
@@ -295,7 +295,7 @@ fun MainAppContent(viewModel: IspViewModel) {
                                 }
                         }
                     } catch (e: Throwable) {
-                        onError("Firebase Auth is not configured yet. Please add google-services.json from your Firebase Console.")
+                        onError(e.localizedMessage ?: e.message ?: "Password reset error occurred.")
                     }
                 }
             )

@@ -219,18 +219,23 @@ fun AppUpdateDialog(
                             }
                         }
 
-                        if (summaryBullets.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.Start
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.whats_new),
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
+                        val hasValidNotes = rawReleaseNotes.isNotBlank() && 
+                            !rawReleaseNotes.trim().equals("null", ignoreCase = true) &&
+                            !rawReleaseNotes.contains("information is not available", ignoreCase = true)
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            Text(
+                                text = stringResource(R.string.whats_new),
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            if (summaryBullets.isNotEmpty()) {
                                 summaryBullets.forEach { bullet ->
                                     Row(
                                         modifier = Modifier
@@ -251,7 +256,7 @@ fun AppUpdateDialog(
                                     }
                                 }
 
-                                if (rawReleaseNotes.isNotBlank()) {
+                                if (hasValidNotes) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     TextButton(
                                         onClick = { showFullReleaseNotesDialog = true },
@@ -264,17 +269,16 @@ fun AppUpdateDialog(
                                         )
                                     }
                                 }
-                            }
-                        } else if (rawReleaseNotes.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(
-                                onClick = { showFullReleaseNotesDialog = true },
-                                modifier = Modifier.align(Alignment.End)
-                            ) {
+                            } else {
+                                val displayText = if (hasValidNotes) {
+                                    rawReleaseNotes
+                                } else {
+                                    "What's New information is not available for this update."
+                                }
                                 Text(
-                                    text = stringResource(R.string.view_details),
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary
+                                    text = displayText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -447,8 +451,13 @@ fun AppUpdateDialog(
                         .heightIn(max = 320.dp)
                         .verticalScroll(scrollState)
                 ) {
+                    val dialogNotes = if (rawReleaseNotes.isNotBlank() && !rawReleaseNotes.trim().equals("null", ignoreCase = true)) {
+                        rawReleaseNotes
+                    } else {
+                        "What's New information is not available for this update."
+                    }
                     Text(
-                        text = rawReleaseNotes,
+                        text = dialogNotes,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -464,12 +473,17 @@ fun AppUpdateDialog(
 }
 
 private fun parseSummaryItems(releaseNotes: String): List<String> {
-    if (releaseNotes.isBlank()) return emptyList()
+    if (releaseNotes.isBlank() || releaseNotes.trim().equals("null", ignoreCase = true) || releaseNotes.contains("information is not available", ignoreCase = true)) {
+        return emptyList()
+    }
     return releaseNotes.lines()
         .map { it.trim() }
         .filter { line ->
             line.isNotBlank() &&
+            !line.equals("null", ignoreCase = true) &&
             !line.startsWith("#") &&
+            !line.startsWith("What's New in", ignoreCase = true) &&
+            !line.startsWith("What's New", ignoreCase = true) &&
             !line.contains("Full Changelog", ignoreCase = true) &&
             !line.startsWith("http://", ignoreCase = true) &&
             !line.startsWith("https://", ignoreCase = true)
@@ -481,8 +495,10 @@ private fun parseSummaryItems(releaseNotes: String): List<String> {
                 .removePrefix("1.")
                 .removePrefix("2.")
                 .removePrefix("3.")
+                .removePrefix("4.")
+                .removePrefix("5.")
                 .trim()
         }
-        .filter { it.isNotBlank() }
-        .take(3)
+        .filter { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+        .take(8)
 }

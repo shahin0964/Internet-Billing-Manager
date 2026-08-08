@@ -210,7 +210,12 @@ object AppUpdateManager {
             val releaseName = json.optString("name", "")
             val cleanVersion = tagName.removePrefix("v").removePrefix("V")
                 .ifBlank { releaseName.removePrefix("v").removePrefix("V") }
-            val releaseNotes = json.optString("body", "")
+            val rawBody = if (json.isNull("body")) "" else json.optString("body", "")
+            val releaseNotes = if (rawBody.isBlank() || rawBody.trim().equals("null", ignoreCase = true)) {
+                "What's New information is not available for this update."
+            } else {
+                rawBody.trim()
+            }
 
             Log.d(TAG, "Release tag received: $tagName (clean: $cleanVersion)")
 
