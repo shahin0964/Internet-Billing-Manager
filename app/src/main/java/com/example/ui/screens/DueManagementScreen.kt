@@ -256,7 +256,8 @@ tonalElevation = 2.dp,
                 if (phone.isNotEmpty()) {
                     OutlinedButton(
                         onClick = {
-                            val msg = "Dear ${bill.customerName}, your $ispName internet bill for ${bill.billingMonth} of $currencySymbol${bill.dueAmount.formatAmount()} is due. Please clear payment to avoid disconnection. Thank you."
+                            val ispPrefix = if (ispName.isNotBlank()) "$ispName " else ""
+                            val msg = "Dear ${bill.customerName}, your ${ispPrefix}internet bill for ${bill.billingMonth} of $currencySymbol${bill.dueAmount.formatAmount()} is due. Please clear payment to avoid disconnection. Thank you."
                             onSendReminder(phone, msg)
                         },
                         modifier = Modifier.weight(1f),

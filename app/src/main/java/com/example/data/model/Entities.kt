@@ -61,7 +61,7 @@ data class PaymentEntity(
 @Entity(tableName = "business_settings")
 data class BusinessSettingsEntity(
     @PrimaryKey val id: Int = 1,
-    val ispName: String = "Broadband ISP",
+    val ispName: String = "",
     val hotline: String = "",
     val address: String = "",
     val currencySymbol: String = "৳",

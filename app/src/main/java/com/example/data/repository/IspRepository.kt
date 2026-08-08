@@ -634,7 +634,7 @@ class IspRepository(
                 val obj = root.getJSONObject("settings")
                 settingsObj = BusinessSettingsEntity(
                     id = if (obj.has("id")) obj.getInt("id") else 1,
-                    ispName = obj.optString("ispName", "Broadband ISP"),
+                    ispName = obj.optString("ispName", ""),
                     hotline = obj.optString("hotline", ""),
                     address = obj.optString("address", ""),
                     currencySymbol = obj.optString("currencySymbol", "৳"),
@@ -811,7 +811,7 @@ class IspRepository(
             val obj = root.getJSONObject("settings")
             settingsObj = BusinessSettingsEntity(
                 id = if (obj.has("id")) obj.getInt("id") else 1,
-                ispName = obj.optString("ispName", "Broadband ISP"),
+                ispName = obj.optString("ispName", ""),
                 hotline = obj.optString("hotline", ""),
                 address = obj.optString("address", ""),
                 currencySymbol = obj.optString("currencySymbol", "৳"),

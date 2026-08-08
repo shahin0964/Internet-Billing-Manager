@@ -90,20 +90,28 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
         )
 
-        settings = repository.settings.combine(MutableStateFlow(Unit)) { s, _ ->
-            s ?: BusinessSettingsEntity(
+        settings = repository.settings.map { s ->
+            val cur = s ?: BusinessSettingsEntity(
                 id = 1,
-                ispName = "Global Fiber ISP",
-                hotline = "+1 (800) 555-0199",
-                address = "Central NOC, Tech City",
+                ispName = "",
+                hotline = "",
+                address = "",
                 currencySymbol = "৳",
                 networkStatus = "Operational",
                 themeMode = "SYSTEM"
             )
+            val cleanIspName = if (cur.ispName in listOf("Global Fiber ISP", "FastNet Broadband", "Broadband ISP")) "" else cur.ispName
+            val cleanHotline = if (cur.hotline == "+1 (800) 555-0199") "" else cur.hotline
+            val cleanAddress = if (cur.address in listOf("Central NOC, Tech City", "Main NOC, Plaza Suite 10")) "" else cur.address
+            if (cleanIspName != cur.ispName || cleanHotline != cur.hotline || cleanAddress != cur.address) {
+                cur.copy(ispName = cleanIspName, hotline = cleanHotline, address = cleanAddress)
+            } else {
+                cur
+            }
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
-            BusinessSettingsEntity()
+            BusinessSettingsEntity(ispName = "", hotline = "", address = "")
         )
 
         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
@@ -174,18 +182,29 @@ class IspViewModel(application: Application) : AndroidViewModel(application) {
                 repository.saveSettings(
                     BusinessSettingsEntity(
                         id = 1,
-                        ispName = "FastNet Broadband",
-                        hotline = "+1 (800) 555-0199",
-                        address = "Main NOC, Plaza Suite 10",
+                        ispName = "",
+                        hotline = "",
+                        address = "",
                         currencySymbol = "৳",
                         networkStatus = "Operational",
                         themeMode = "SYSTEM"
                     )
                 )
-            } else if (currentSettings.currencySymbol == "$") {
-                repository.saveSettings(
-                    currentSettings.copy(currencySymbol = "৳")
-                )
+            } else {
+                val cleanIspName = if (currentSettings.ispName in listOf("Global Fiber ISP", "FastNet Broadband", "Broadband ISP")) "" else currentSettings.ispName
+                val cleanHotline = if (currentSettings.hotline == "+1 (800) 555-0199") "" else currentSettings.hotline
+                val cleanAddress = if (currentSettings.address in listOf("Central NOC, Tech City", "Main NOC, Plaza Suite 10")) "" else currentSettings.address
+                val cleanSymbol = if (currentSettings.currencySymbol == "$") "৳" else currentSettings.currencySymbol
+                if (cleanIspName != currentSettings.ispName || cleanHotline != currentSettings.hotline || cleanAddress != currentSettings.address || cleanSymbol != currentSettings.currencySymbol) {
+                    repository.saveSettings(
+                        currentSettings.copy(
+                            ispName = cleanIspName,
+                            hotline = cleanHotline,
+                            address = cleanAddress,
+                            currencySymbol = cleanSymbol
+                        )
+                    )
+                }
             }
         }
     }

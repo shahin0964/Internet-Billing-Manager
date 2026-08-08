@@ -129,25 +129,21 @@ tonalElevation = 2.dp,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (settings.logoUri != null) {
-                                        coil.compose.AsyncImage(
-                                            model = settings.logoUri,
-                                            contentDescription = "Company Logo",
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(androidx.compose.foundation.shape.CircleShape),
-                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                    }
+                    Column {
+                        if (settings.ispName.isNotBlank() || settings.logoUri != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (settings.logoUri != null) {
+                                    coil.compose.AsyncImage(
+                                        model = settings.logoUri,
+                                        contentDescription = "Company Logo",
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(androidx.compose.foundation.shape.CircleShape),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                }
+                                if (settings.ispName.isNotBlank()) {
                                     Text(
                                         text = settings.ispName,
                                         style = MaterialTheme.typography.titleMedium.copy(
@@ -156,18 +152,17 @@ tonalElevation = 2.dp,
                                         ),
                                         color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false)
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
-                                Text(
-                                    text = currentDateStr,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
+                            Spacer(modifier = Modifier.height(2.dp))
                         }
-                        
+                        Text(
+                            text = currentDateStr,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                 }
